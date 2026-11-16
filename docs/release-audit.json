@@ -2720,5 +2720,15 @@
   "unsafeExecutionSinks": [],
   "backendOrTestRouteCandidates": [],
   "issues": [],
-  "reviewBoundary": "自动语法树和文本检查，另有AI逐项源代码复核；没有独立人类复核签字。不是公网渗透测试或未知漏洞保证。"
+  "reviewBoundary": "自动语法树、文本检查与AI代码复核分别记录；Ray已明确确认完成v0.2.0对应提交的独立人工复核，见human-review.json。扫描不是公网渗透测试或未知漏洞保证。",
+  "independentHumanReview": {
+    "status": "completed",
+    "reviewer": "Ray",
+    "confirmedDate": "2026-11-17",
+    "timezone": "Asia/Shanghai",
+    "scope": "v0.2.0工作流本次独立人工复核",
+    "reviewedCommit": "e9b8d4903e2a8066f1e4e865e9f350df0caff731",
+    "basis": "explicit-user-confirmation",
+    "statement": "我已完成独立人工复核。"
+  }
 }
