@@ -19,6 +19,7 @@ res['字幕最长字数']=max(len(s['text']) for s in subs)
 res['sha256']=hashlib.sha256(F.read_bytes()).hexdigest()
 pts=[(s['id'],(s['start']+min(s['end']-s['start']-3,max(40,int((s['end']-s['start'])*.6))))/30) for s in tl['scenes']]
 def fr(q):
+ """读取探测结果中的实际帧率，用于一致性检查。"""
  k,sec=q;subprocess.run([FF,'-nostdin','-v','error','-y','-ss',f'{sec:.3f}','-i',str(F),'-frames:v','1','-vf','scale=640:360',str(Q/'frames'/f'{k}.jpg')],check=True)
 with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:list(ex.map(fr,pts))
 font=ImageFont.truetype('/System/Library/Fonts/Supplemental/Arial.ttf',20)

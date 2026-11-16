@@ -4,6 +4,7 @@ from pathlib import Path
 from apply_config import ROOT,load
 from title_symbols import invalid_title_characters
 def check(text,platforms,brand_name="RayTalk"):
+ """核对平台顺序、字段、标题长度与符号约束。"""
  errors=[];names=[p['name'] for p in platforms]
  heads=re.findall(r'^## (.+)$',text,re.M)
  if heads!=names:errors.append('Platform order/set must be '+', '.join(names))

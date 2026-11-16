@@ -13,3 +13,5 @@ description: 手绘白板讲解视频制作，按本仓库品牌、文案审校�
 先按审校后的scenes.js生成场景，字幕区y≥960、右上水印区保持净空。用根目录 scripts/wb.py 执行命令。技能配置由根config同步；完整出片前需真实旁白音轨与对齐JSON。参考 references/dsl.md、scene-patterns.md 和 stickers.md。
 
 新稿必须先经Humanizer-zh、stop-slop、taste-skill适用部分与事实复核，再配音/字幕/制作。读同级 ../video-common/references/fact-check.md、delivery-qa.md，按需要读compliance.md。四平台+微信公众号独立文章及双封面交付；仅完成实际检查后称已交付，不自动发布。
+
+当前声音和整套交付以根docs/最新工作流.md为准：AI受众审查→每期锁声→原生语速与同次真实时间戳；两种模式共用scripts/narration.mjs。不要沿用历史参考里的固定刘飞/ChatCut默认或固定1.2倍。

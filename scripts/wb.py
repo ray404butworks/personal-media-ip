@@ -5,16 +5,19 @@ import subprocess,sys,argparse,json
 from apply_config import ROOT,apply,resolve,load
 
 def run(*args):
+ """以参数数组启动本地子进程，不拼接不可信命令。"""
  argv=[str(x) for x in args]
  if argv[0]=='node' and (ROOT/'.env').exists():argv.insert(1,'--env-file='+str(ROOT/'.env'))
  subprocess.run(argv,check=True,cwd=ROOT/'skills/whiteboard-video')
 def project(arg,c):
+ """定位明确工程路径或唯一匹配项，歧义时拒绝。"""
  p=Path(arg)
  if p.is_dir():return p.resolve()
  parent=resolve(c['dirs']['projects']);hits=sorted(x for x in parent.iterdir() if x.is_dir() and arg.lower() in x.name.lower())
  if len(hits)!=1:raise ValueError('Specify one exact episode path; found '+str(len(hits))+' matches')
  return hits[0]
 def ensure_external(p,c):
+ """验证外部旁白音频、稿件、语速与实测时间仍然匹配。"""
  wb=ROOT/'skills/whiteboard-video';d=load(wb/'config.json')
  out=Path(d['dirs']['build'])/p.name/'work/audio'
  for scene in load(p/'scenes/script.json'):
@@ -24,6 +27,7 @@ def ensure_external(p,c):
   if m.get('segments')!=scene['segments'] or m.get('speed')!=c['tts']['speed']:raise ValueError('Narration is stale after script/speed changes; regenerate and reimport it')
   if not m.get('wordList') or m.get('estimated'):raise ValueError('External narration requires actual aligned timing, not estimates')
 def main():
+ """解析命令行参数并执行本入口，失败保持非零退出。"""
  ap=argparse.ArgumentParser();ap.add_argument('command',choices=['new','list','scenes','stills','tts','render','mix','cover','build']);ap.add_argument('episode',nargs='?');ap.add_argument('extra',nargs='*');a=ap.parse_args()
  c=apply();wb=ROOT/'skills/whiteboard-video'
  if a.command=='list':

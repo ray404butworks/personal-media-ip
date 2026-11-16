@@ -6,7 +6,7 @@ VIDEO_CHANNEL_SEQUENCES = ['°C']
 
 
 def invalid_title_characters(title, allowed_symbols, allowed_sequences=()):
-    """Allow letters/numbers, ordinary spaces, and configured symbols only."""
+    """根据配置白名单找出标题内不支持的字符和组合。"""
     invalid = []
     i = 0
     while i < len(title):

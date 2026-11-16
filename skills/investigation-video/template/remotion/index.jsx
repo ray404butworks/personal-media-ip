@@ -2,7 +2,7 @@ import React from 'react';
 import {AbsoluteFill,Composition,registerRoot,useCurrentFrame,interpolate,staticFile} from 'remotion';
 import {BrandStamp} from '../../assets/BrandStamp.jsx';
 import profile from './profile.json';
-function Demo(){
+/* 按帧计算模板动画，用于验证品牌、字体和渲染兼容性。 */ function Demo(){
  const f=useCurrentFrame();const v=interpolate(f,[0,60],[0,1],{extrapolateRight:'clamp'});
  return <AbsoluteFill style={{background:'#f3f4f6',color:profile.brand.ink,fontFamily:'WorkflowBody',padding:100}}>
   <style>{`@font-face{font-family:WorkflowBrand;src:url('${staticFile(profile.brand.fontFile)}')}@font-face{font-family:WorkflowBody;src:url('${staticFile(profile.brand.bodyFontFile)}')}`}</style>
@@ -13,4 +13,4 @@ function Demo(){
   <BrandStamp brand={profile.brand}/>
  </AbsoluteFill>;
 }
-registerRoot(()=> <Composition id="InvestigationVisual" component={Demo} width={1920} height={1080} fps={30} durationInFrames={180}/>);
+registerRoot(/* 注册固定视频组合，尺寸和帧率由当前模板定义。 */ ()=> <Composition id="InvestigationVisual" component={Demo} width={1920} height={1080} fps={30} durationInFrames={180}/>);

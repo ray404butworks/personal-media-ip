@@ -20,11 +20,11 @@ const P = projectPaths(args[0] || '.');
 const stills = args.includes('--stills');
 const coverMode = args.includes('--cover');
 const cleanMode = args.includes('--clean');
-const only = args.slice(1).filter((a) => !a.startsWith('--'));
+const only = args.slice(1).filter(/* 筛出满足当前检查条件的项，排除不适用数据。 */ (a) => !a.startsWith('--'));
 const FPS = cfg.render.fps, HOLD = cfg.render.holdSeconds, LEAD = cfg.render.leadSeconds;
 const WORKERS = Math.max(1, Number(cfg.render.workers) || 1);
 const BRAND = cfg.brand || {};
-const expand = (p) => { const e = p.replace(/^~/, process.env.HOME); return path.isAbsolute(e) ? e : path.join(__dirname, '..', e); };
+const expand = /* 展开用户目录并解析相对项目路径，保留可迁移配置。 */ (p) => { const e = p.replace(/^~/, process.env.HOME); return path.isAbsolute(e) ? e : path.join(__dirname, '..', e); };
 
 // 传给页面的品牌数据：logo 读成 dataURL（可选）
 function brandPayload() {
@@ -56,7 +56,7 @@ function loadDrawing(name) {
     if (emb) for (const line of emb[1].split('\n')) {
       const mm = line.match(/^(\S+):\s*\[\[([^\]|]+)/); if (!mm) continue;
       const fname = path.basename(mm[2]);
-      const cand = [path.join(P.scenes, fname), path.join(P.assets, fname)].find((f) => fs.existsSync(f));
+      const cand = [path.join(P.scenes, fname), path.join(P.assets, fname)].find(/* 查找满足当前身份或边界条件的首个匹配项。 */ (f) => fs.existsSync(f));
       if (!cand) throw new Error(`找不到嵌入图片 ${fname}`);
       doc.files[mm[1]] = { id: mm[1], mimeType: 'image/png', dataURL: 'data:image/png;base64,' + fs.readFileSync(cand).toString('base64') };
     }
@@ -71,19 +71,19 @@ function infoFor(sc) {
   if (fs.existsSync(f)) return JSON.parse(fs.readFileSync(f));
   if (!stills) throw new Error(`缺少 audio/${sc.name}.json，先跑 wb tts`);
   const cps = (286 / 60) * Number(cfg.tts.speed || 1), starts = []; let t = 0;
-  for (const seg of sc.segments) { starts.push(t); t += [...seg].filter((c) => /[\p{L}\p{N}]/u.test(c)).length / cps + 0.4; }
+  for (const seg of sc.segments) { starts.push(t); t += [...seg].filter(/* 筛出满足当前检查条件的项，排除不适用数据。 */ (c) => /[\p{L}\p{N}]/u.test(c)).length / cps + 0.4; }
   return { duration: t, segmentStarts: starts, estimated: true };
 }
 
-function beatsFor(info) {
+/* 依据实测旁白段起点生成镜头绘制窗口。 */ function beatsFor(info) {
   const st = info.segmentStarts, d = info.duration;
-  return st.map((t, i) => [t + LEAD, (i + 1 < st.length ? st[i + 1] : d) + LEAD]);
+  return st.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (t, i) => [t + LEAD, (i + 1 < st.length ? st[i + 1] : d) + LEAD]);
 }
 
-function run(cmd, argv) {
-  return new Promise((res, rej) => {
+/* 以参数数组启动子进程，检查退出状态，不拼接命令字符串。 */ function run(cmd, argv) {
+  return new Promise(/* 等待当前异步步骤完成，并向上层传递失败。 */ (res, rej) => {
     const c = spawn(cmd, argv, { stdio: 'inherit' });
-    c.on('close', (code) => (code === 0 ? res() : rej(new Error(`${cmd} exit ${code}`))));
+    c.on('close', /* 响应当前进程或资源事件并更新完成状态。 */ (code) => (code === 0 ? res() : rej(new Error(`${cmd} exit ${code}`))));
   });
 }
 
@@ -93,15 +93,15 @@ async function openPage() {
   const browser = await chromium.launch({ executablePath: process.env.WB_CHROMIUM_EXECUTABLE || undefined });
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   await page.goto(pathToFileURL(path.join(LIB, 'render.html')).href);
-  await page.evaluate((b) => window.setWorkflowFonts(b), { name: BRAND.name, font: BRAND.font, bodyFont: BRAND.bodyFont });
-  await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(/* 在渲染页面执行本帧所需操作，不传入凭据。 */ (b) => window.setWorkflowFonts(b), { name: BRAND.name, font: BRAND.font, bodyFont: BRAND.bodyFont });
+  await page.evaluate(/* 在渲染页面执行本帧所需操作，不传入凭据。 */ () => document.fonts.ready);
   await page.waitForTimeout(300);
-  await page.evaluate((o) => window.setPen(o), { ...(cfg.render.pen || {}), color: BRAND.pen && BRAND.pen.color });
+  await page.evaluate(/* 在渲染页面执行本帧所需操作，不传入凭据。 */ (o) => window.setPen(o), { ...(cfg.render.pen || {}), color: BRAND.pen && BRAND.pen.color });
   return { browser, page };
 }
 
-async function shot(page, t) {
-  await page.evaluate((t) => window.seek(t), t);
+/* 跳到指定帧时间后截图，有限重试处理浏览器瞬时失败。 */ async function shot(page, t) {
+  await page.evaluate(/* 在渲染页面执行本帧所需操作，不传入凭据。 */ (t) => window.seek(t), t);
   for (let tries = 0; ; ) {
     try { return await page.screenshot({ type: 'jpeg', quality: 92, timeout: 20000 }); }
     catch (e) { if (++tries >= 3) throw e; console.warn(`\n  截图重试 ${tries}: ${e.message.split('\n')[0]}`); }
@@ -111,19 +111,19 @@ async function shot(page, t) {
 // 各页交错出帧，按帧号顺序写进 ffmpeg；返回 ffmpeg 收尾的 promise（不必等它编完就能开始下一个场景）
 async function encodeFrames(pages, frames, ff, label) {
   const ready = new Map(); let next = 0, wake = null, err = null; const t0 = Date.now();
-  const closed = new Promise((res, rej) => ff.on('close', (c) => (c === 0 ? res() : rej(new Error(`ffmpeg ${label} exit ${c}`)))));
-  closed.catch(() => {});   // 由调用方 await；这里只防"还没 await 就先失败"被当成未处理
-  const workers = Promise.all(pages.map(async (page, k) => {
+  const closed = new Promise(/* 等待当前异步步骤完成，并向上层传递失败。 */ (res, rej) => ff.on('close', /* 响应当前进程或资源事件并更新完成状态。 */ (c) => (c === 0 ? res() : rej(new Error(`ffmpeg ${label} exit ${c}`)))));
+  closed.catch(/* 处理当前异步失败并保持错误可追溯。 */ () => {});   // 由调用方 await；这里只防"还没 await 就先失败"被当成未处理
+  const workers = Promise.all(pages.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ async (page, k) => {
     for (let i = k; i < frames && !err; i += pages.length) {
-      while (i - next > pages.length * 3 && !err) await new Promise((r) => setTimeout(r, 5));   // 别让某页跑太远，控内存
+      while (i - next > pages.length * 3 && !err) await new Promise(/* 等待当前异步步骤完成，并向上层传递失败。 */ (r) => setTimeout(r, 5));   // 别让某页跑太远，控内存
       ready.set(i, await shot(page, i / FPS)); if (wake) wake();
     }
-  })).catch((e) => { err = e; if (wake) wake(); });
+  })).catch(/* 处理当前异步失败并保持错误可追溯。 */ (e) => { err = e; if (wake) wake(); });
   while (next < frames) {
     if (err) { ff.kill(); throw err; }
-    if (!ready.has(next)) { await new Promise((r) => (wake = r)); wake = null; continue; }
+    if (!ready.has(next)) { await new Promise(/* 等待当前异步步骤完成，并向上层传递失败。 */ (r) => (wake = r)); wake = null; continue; }
     const buf = ready.get(next); ready.delete(next);
-    if (!ff.stdin.write(buf)) await new Promise((r) => ff.stdin.once('drain', r));
+    if (!ff.stdin.write(buf)) await new Promise(/* 等待当前异步步骤完成，并向上层传递失败。 */ (r) => ff.stdin.once('drain', r));
     if (next % 150 === 0) process.stdout.write(`\r${label}: ${next}/${frames} frames  ${((Date.now() - t0) / 1000).toFixed(0)}s`);
     next++;
   }
@@ -135,7 +135,7 @@ async function encodeFrames(pages, frames, ff, label) {
 // 出片后清中间产物：stills 静帧（成片出来就过期了）、out/ 里场景改名/删掉后留下的旧分段、concat 清单。
 // 留着 out/ 各场景分段与 master.mp4：单场景重渲要靠它们重拼，wb mix 调 BGM 要读 master
 function cleanWork(script) {
-  const keep = new Set(script.map((sc) => `${sc.name}.mp4`).concat(['99-brand.mp4', 'master.mp4']));
+  const keep = new Set(script.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (sc) => `${sc.name}.mp4`).concat(['99-brand.mp4', 'master.mp4']));
   const gone = [];
   if (fs.existsSync(P.frames)) { gone.push(`frames/ ${fs.readdirSync(P.frames).length} 张静帧`); fs.rmSync(P.frames, { recursive: true, force: true }); }
   if (fs.existsSync(P.out)) for (const f of fs.readdirSync(P.out)) {
@@ -145,15 +145,15 @@ function cleanWork(script) {
   console.log(gone.length ? `清理中间产物：${gone.join('、')}` : '没有要清的中间产物');
 }
 
-async function main() {
+/* 解析本入口参数，按依赖顺序执行当前制作或检查命令。 */ async function main() {
   const script = JSON.parse(fs.readFileSync(P.script));
   if (cleanMode) return cleanWork(script);
   fs.mkdirSync(P.out, { recursive: true });
   if (stills) fs.mkdirSync(P.frames, { recursive: true });
   // 静帧与封面只截几张，一页够了；出片开 WORKERS 路并行
   const workers = await Promise.all(Array.from({ length: stills || coverMode ? 1 : WORKERS }, openPage));
-  const pages = workers.map((w) => w.page), page = pages[0];
-  const closeAll = () => Promise.all(workers.map((w) => w.browser.close()));
+  const pages = workers.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (w) => w.page), page = pages[0];
+  const closeAll = /* 关闭本次创建的渲染页面和浏览器，释放资源。 */ () => Promise.all(workers.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (w) => w.browser.close()));
 
   // 封面：scenes/cover.json 列出的每个画幅，全部画完的静帧 → <期>/封面-<ratio>.png
   if (coverMode) {
@@ -162,9 +162,9 @@ async function main() {
     for (const c of JSON.parse(fs.readFileSync(cj))) {
       const doc = loadDrawing(c.name);
       await page.setViewportSize({ width: c.width, height: c.height });
-      await page.evaluate(({ w, h }) => window.setCanvas(w, h), { w: c.width, h: c.height });
-      await page.evaluate(({ elements, beatOf, files }) => window.loadScene(elements, beatOf, [[0, 5]], files, 6), { elements: doc.elements, beatOf: c.beatOf, files: doc.files || {} });
-      await page.evaluate(() => { window.setBrand(null); window.setCaptions([]); window.seek(100); });
+      await page.evaluate(/* 在渲染页面执行本帧所需操作，不传入凭据。 */ ({ w, h }) => window.setCanvas(w, h), { w: c.width, h: c.height });
+      await page.evaluate(/* 在渲染页面执行本帧所需操作，不传入凭据。 */ ({ elements, beatOf, files }) => window.loadScene(elements, beatOf, [[0, 5]], files, 6), { elements: doc.elements, beatOf: c.beatOf, files: doc.files || {} });
+      await page.evaluate(/* 在渲染页面执行本帧所需操作，不传入凭据。 */ () => { window.setBrand(null); window.setCaptions([]); window.seek(100); });
       const out = path.join(P.project, `封面-${c.ratio.replace(':', 'x')}.png`);
       await page.screenshot({ path: out });
       console.log(`封面 ${c.ratio} ${c.width}×${c.height} → ${path.basename(out)}`);
@@ -176,7 +176,7 @@ async function main() {
   const wmDraw = (BRAND.watermark && BRAND.watermark.enabled !== false && BRAND.watermark.drawInSeconds) || 0;
 
   // 待渲染队列：正片场景 + （整片渲染时）片尾品牌卡
-  const queue = script.filter((sc) => !only.length || only.includes(sc.name)).map((sc) => ({ sc, isCard: false }));
+  const queue = script.filter(/* 筛出满足当前检查条件的项，排除不适用数据。 */ (sc) => !only.length || only.includes(sc.name)).map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (sc) => ({ sc, isCard: false }));
   const wantCard = BRAND.endCard && BRAND.endCard.enabled && BRAND.name;
   if (wantCard && (!only.length || only.includes('99-brand'))) {
     // 片尾卡：总长 seconds，其中最后 holdSeconds 静止展示（画完再停一会儿）
@@ -196,29 +196,29 @@ async function main() {
     const isFirst = script.length && sc.name === script[0].name;
     const cues = cfg.captions.enabled && info.wordList ? cuesForScene(info) : [];
     // 每个页面各自装同一个场景（排期是纯计算，各页结果相同），等贴纸解码完再开拍
-    const [n] = await Promise.all(pages.map(async (pg) => {
-      const n = await pg.evaluate(({ elements, beatOf, beats, files, total }) => window.loadScene(elements, beatOf, beats, files, total), { elements: doc.elements, beatOf: sc.beatOf, beats, files: doc.files || {}, total: info.drawEnd || total });
-      await pg.evaluate(({ brand, win }) => window.setBrand(brand, win), { brand: isCard ? null : brand, win: isFirst && wmDraw ? [0.1, 0.1 + wmDraw] : null });
-      await pg.evaluate(({ cues, style }) => window.setCaptions(cues, style), { cues, style: cfg.captions });
-      await pg.evaluate(() => window.imagesReady());
+    const [n] = await Promise.all(pages.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ async (pg) => {
+      const n = await pg.evaluate(/* 在渲染页面执行本帧所需操作，不传入凭据。 */ ({ elements, beatOf, beats, files, total }) => window.loadScene(elements, beatOf, beats, files, total), { elements: doc.elements, beatOf: sc.beatOf, beats, files: doc.files || {}, total: info.drawEnd || total });
+      await pg.evaluate(/* 在渲染页面执行本帧所需操作，不传入凭据。 */ ({ brand, win }) => window.setBrand(brand, win), { brand: isCard ? null : brand, win: isFirst && wmDraw ? [0.1, 0.1 + wmDraw] : null });
+      await pg.evaluate(/* 在渲染页面执行本帧所需操作，不传入凭据。 */ ({ cues, style }) => window.setCaptions(cues, style), { cues, style: cfg.captions });
+      await pg.evaluate(/* 在渲染页面执行本帧所需操作，不传入凭据。 */ () => window.imagesReady());
       return n;
     }));
 
     if (stills) {
       for (let i = 0; i < beats.length; i++) {
         // 最后一个 beat 允许画到 HOLD 里，静帧取场景末尾
-        await page.evaluate((t) => window.seek(t), i + 1 === beats.length ? total - 0.05 : beats[i][1] - 0.02);
+        await page.evaluate(/* 在渲染页面执行本帧所需操作，不传入凭据。 */ (t) => window.seek(t), i + 1 === beats.length ? total - 0.05 : beats[i][1] - 0.02);
         await page.screenshot({ path: path.join(P.frames, `${sc.name}-beat${i + 1}.png`) });
       }
       if (!isCard) {
-        await page.evaluate((t) => window.seek(t), beats[0][0] + (beats[0][1] - beats[0][0]) * 0.4);
+        await page.evaluate(/* 在渲染页面执行本帧所需操作，不传入凭据。 */ (t) => window.seek(t), beats[0][0] + (beats[0][1] - beats[0][0]) * 0.4);
         await page.screenshot({ path: path.join(P.frames, `${sc.name}-mid.png`) });
       }
       console.log(`${sc.name}: ${n} items, ${beats.length} stills`);
       continue;
     }
 
-    const audio = isCard ? null : ['wav', 'mp3'].map((e) => path.join(P.audio, `${sc.name}.${e}`)).find((f) => fs.existsSync(f));
+    const audio = isCard ? null : ['wav', 'mp3'].map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (e) => path.join(P.audio, `${sc.name}.${e}`)).find(/* 查找满足当前身份或边界条件的首个匹配项。 */ (f) => fs.existsSync(f));
     if (!isCard && !audio) throw new Error(`缺少旁白音频 audio/${sc.name}.wav，先跑 wb tts`);
     const outMp4 = path.join(P.out, `${sc.name}.mp4`);
     const audioIn = isCard ? ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo'] : ['-i', audio];
@@ -238,15 +238,15 @@ async function main() {
 
   // 拼 master：按 script 顺序（+ 片尾卡）取 out/ 里的分段；只渲染了部分场景时，只要其余分段还在就照样重拼，wb mix 即可出新成片
   if (!stills) {
-    const names = script.map((sc) => sc.name).concat(wantCard ? ['99-brand'] : []);
-    const all = names.map((n) => path.join(P.out, `${n}.mp4`));
-    const missing = all.filter((f) => !fs.existsSync(f)).map((f) => path.basename(f));
+    const names = script.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (sc) => sc.name).concat(wantCard ? ['99-brand'] : []);
+    const all = names.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (n) => path.join(P.out, `${n}.mp4`));
+    const missing = all.filter(/* 筛出满足当前检查条件的项，排除不适用数据。 */ (f) => !fs.existsSync(f)).map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (f) => path.basename(f));
     if (missing.length) { console.log(`缺少分段 ${missing.join(', ')}，没拼 master；跑一次完整 wb render`); return; }
     const list = path.join(P.out, 'list.txt');
-    fs.writeFileSync(list, all.map((p) => `file '${p.replace(/\\/g, '/')}'`).join('\n'));
+    fs.writeFileSync(list, all.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (p) => `file '${p.replace(/\\/g, '/')}'`).join('\n'));
     await run('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', path.join(P.out, 'master.mp4')]);
     console.log(`master: ${path.relative(process.cwd(), path.join(P.out, 'master.mp4'))}（无 BGM，下一步 wb mix）`);
     if (cfg.captions.enabled) { const r = writeSrt(P.project); console.log(`字幕 ${r.count} 条 → ${path.basename(r.file)}`); }
   }
 }
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch(/* 处理当前异步失败并保持错误可追溯。 */ (e) => { console.error(e); process.exit(1); });

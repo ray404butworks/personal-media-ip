@@ -11,7 +11,7 @@
 </style>
 <script src="../node_modules/roughjs/bundled/rough.js"></script>
 <script>
-window.setWorkflowFonts = async function(b) {
+window.setWorkflowFonts = /* 加载配置字体并应用到正文和品牌层，等待字体可用。 */ async function(b) {
   window.workflowBrandName=b.name;
   for (const [key, family] of [['bodyFont','WorkflowBody'],['font','WorkflowBrand']]) {
     const f = b[key]; if (!f || !f.url) continue;
@@ -62,13 +62,13 @@ let items = [];        // 场景元素 {kind, start, end, startPt, endPt, ...}
 let brandItems = [];   // 水印元素（同结构）
 let PEN = { speed: 1000, fillSpeed: 4000, minSeconds: 0.35, gapSeconds: 0.12, charSeconds: [0.06, 0.2], overflow: 0.35, travelMax: 1.6 };
 
-const isCJK = (ch) => /[　-鿿＀-￯]/.test(ch);
-const clamp01 = (v) => Math.max(0, Math.min(1, v));
-const ease = (v) => v < 0.5 ? 2 * v * v : 1 - Math.pow(-2 * v + 2, 2) / 2;
+const isCJK = /* 识别中日韩字符，用于文本测量和绘制节奏。 */ (ch) => /[　-鿿＀-￯]/.test(ch);
+const clamp01 = /* 把动画进度限制在零到一，避免绘制越界。 */ (v) => Math.max(0, Math.min(1, v));
+const ease = /* 计算对称缓入缓出，保持帧动画连续。 */ (v) => v < 0.5 ? 2 * v * v : 1 - Math.pow(-2 * v + 2, 2) / 2;
 
-function mk(tag, attrs) { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; }
+/* 通过SVG命名空间创建节点，以属性赋值方式设置样式。 */ function mk(tag, attrs) { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; }
 
-function roughOpts(el) {
+/* 由当前元素推导手绘线条和填充参数。 */ function roughOpts(el) {
   const o = {
     seed: el.seed, roughness: el.roughness, stroke: el.strokeColor, strokeWidth: el.strokeWidth,
     hachureAngle: -41, hachureGap: el.strokeWidth * 4, fillWeight: el.strokeWidth * 0.7, curveFitting: 1,
@@ -80,11 +80,11 @@ function roughOpts(el) {
   return o;
 }
 
-function roundRectPath(x, y, w, h, r) {
+/* 根据尺寸及圆角生成SVG矩形路径。 */ function roundRectPath(x, y, w, h, r) {
   return `M ${x + r} ${y} L ${x + w - r} ${y} Q ${x + w} ${y} ${x + w} ${y + r} L ${x + w} ${y + h - r} Q ${x + w} ${y + h} ${x + w - r} ${y + h} L ${x + r} ${y + h} Q ${x} ${y + h} ${x} ${y + h - r} L ${x} ${y + r} Q ${x} ${y} ${x + r} ${y} Z`;
 }
 
-function arrowheadDrawables(pts, el, atStart) {
+/* 根据端点方向构造箭头头部的手绘线段。 */ function arrowheadDrawables(pts, el, atStart) {
   const n = pts.length;
   const [x2, y2] = atStart ? pts[0] : pts[n - 1];
   const [x1, y1] = atStart ? pts[1] : pts[n - 2];
@@ -99,7 +99,7 @@ function arrowheadDrawables(pts, el, atStart) {
   return out;
 }
 
-function drawablesFor(el) {
+/* 将语义图形转换为可逐笔绘制的路径集合。 */ function drawablesFor(el) {
   const o = roughOpts(el);
   const { x, y, width: w, height: h } = el;
   switch (el.type) {
@@ -109,7 +109,7 @@ function drawablesFor(el) {
     case 'ellipse': return [gen.ellipse(x + w / 2, y + h / 2, w, h, o)];
     case 'diamond': return [gen.polygon([[x + w / 2, y], [x + w, y + h / 2], [x + w / 2, y + h], [x, y + h / 2]], o)];
     case 'line': case 'arrow': {
-      const pts = el.points.map((p) => [x + p[0], y + p[1]]);
+      const pts = el.points.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (p) => [x + p[0], y + p[1]]);
       const out = [];
       if (o.fill) out.push(gen.polygon(pts, o));
       else if (el.roundness) out.push(gen.curve(pts, o));
@@ -125,13 +125,13 @@ function drawablesFor(el) {
 // SVG 的 dash 会在每个子路径（M）处重新起算，一条含多个子路径的 path 用 dashoffset 会"所有边同时长出来"。
 // 所以每个子路径单独一个 <path> 节点、按顺序逐段描。rough.js 默认每条边描两遍，子路径交替是「第一遍/第二遍」，
 // 成对拆成 A/B：A 跟笔尖走，B 滞后一点点同步浮现，一遍画完又有手绘双线质感。
-function subpaths(d) { return d.split(/(?=M)/).map((s) => s.trim()).filter(Boolean); }
+function subpaths(d) { return d.split(/(?=M)/).map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (s) => s.trim()).filter(Boolean); }
 
-function strokeNode(d, p) {
+/* 创建描边节点并记录实际路径长度。 */ function strokeNode(d, p) {
   return mk('path', { d, fill: 'none', stroke: p.stroke, 'stroke-width': p.strokeWidth || 0, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
 }
 
-function buildShape(el, into) {
+/* 将图形路径加入目标层并保留动画所需数据。 */ function buildShape(el, into) {
   const g = mk('g', { opacity: el.opacity / 100 });
   const parts = [];
   for (const d of drawablesFor(el)) {
@@ -163,18 +163,18 @@ function buildShape(el, into) {
     }
   }
   into.appendChild(g);
-  const outline = parts.filter((p) => p.type === 'stroke' && !p.isFillStroke);
-  const fills = parts.filter((p) => !(p.type === 'stroke' && !p.isFillStroke));
-  const outLen = outline.reduce((s, p) => s + p.len, 0);
-  const fillLen = fills.reduce((s, p) => s + (p.len || 300), 0);
-  const first = outline[0] || fills.find((p) => p.len);
+  const outline = parts.filter(/* 筛出满足当前检查条件的项，排除不适用数据。 */ (p) => p.type === 'stroke' && !p.isFillStroke);
+  const fills = parts.filter(/* 筛出满足当前检查条件的项，排除不适用数据。 */ (p) => !(p.type === 'stroke' && !p.isFillStroke));
+  const outLen = outline.reduce(/* 按当前累计规则汇总集合，避免改变项目顺序。 */ (s, p) => s + p.len, 0);
+  const fillLen = fills.reduce(/* 按当前累计规则汇总集合，避免改变项目顺序。 */ (s, p) => s + (p.len || 300), 0);
+  const first = outline[0] || fills.find(/* 查找满足当前身份或边界条件的首个匹配项。 */ (p) => p.len);
   const last = outline[outline.length - 1] || first;
   const startPt = first ? ptOf(first.node, 0) : [el.x, el.y];
   const endPt = last ? ptOf(last.node, last.len) : [el.x + el.width, el.y + el.height];
   const natural = outLen / PEN.speed + Math.min(PEN.fillMaxSeconds || 1.2, fillLen / PEN.fillSpeed) + 0.1;
   return { g, outline, fills, natural, startPt, endPt };
 }
-function ptOf(node, L) { try { const p = node.getPointAtLength(L); return [p.x, p.y]; } catch (e) { return [0, 0]; } }
+/* 读取路径指定长度处的坐标，异常时安全返回起点。 */ function ptOf(node, L) { try { const p = node.getPointAtLength(L); return [p.x, p.y]; } catch (e) { return [0, 0]; } }
 
 // 文字：按行 clip 左→右擦出；每行时长按字数（中文按字号定每字时长，拉丁/数字减半）。
 function textSeconds(line, fontSize) {
@@ -184,12 +184,12 @@ function textSeconds(line, fontSize) {
   for (const ch of line) { if (ch === ' ') s += per * 0.2; else s += isCJK(ch) ? per : per * 0.5; }
   return s;
 }
-function buildText(el, into, idPrefix) {
+/* 创建文字与书写遮罩，使动画按实际帧进度显示。 */ function buildText(el, into, idPrefix) {
   const g = mk('g', {});
   const lines = el.text.split('\n');
   const lh = el.fontSize * el.lineHeight;
   const parts = [];
-  lines.forEach((line, i) => {
+  lines.forEach(/* 逐项执行当前操作，不把部分成功当作全量通过。 */ (line, i) => {
     let ax = el.x, anchor = 'start';
     if (el.textAlign === 'center') { ax = el.x + el.width / 2; anchor = 'middle'; }
     if (el.textAlign === 'right') { ax = el.x + el.width; anchor = 'end'; }
@@ -207,13 +207,13 @@ function buildText(el, into, idPrefix) {
   into.appendChild(g);
   return { g, parts };
 }
-function measureText(b) {
+/* 测量浏览器实际文字范围并更新布局数据。 */ function measureText(b) {
   for (const p of b.parts) {
     const bb = p.text.getBBox();
     p.width = p.text.getComputedTextLength(); p.x0 = bb.x;
     p.clipRect.setAttribute('x', p.x0 - 4);
   }
-  const total = b.parts.reduce((s, p) => s + p.seconds, 0) || 0.2;
+  const total = b.parts.reduce(/* 按当前累计规则汇总集合，避免改变项目顺序。 */ (s, p) => s + p.seconds, 0) || 0.2;
   let acc = 0;
   for (const p of b.parts) { p.f0 = acc / total; acc += p.seconds; p.f1 = acc / total; }
   b.natural = total + 0.1;
@@ -222,7 +222,7 @@ function measureText(b) {
   b.endPt = [p1.x0 + p1.width, parseFloat(p1.text.getAttribute('y')) - fs * 0.35];
 }
 
-function buildImage(el, files, into, idPrefix) {
+/* 读取已提供图片并建立裁切和显示层。 */ function buildImage(el, files, into, idPrefix) {
   const f = files[el.fileId];
   const g = mk('g', { opacity: el.opacity / 100 });
   const clipId = idPrefix + 'ci' + el.id;
@@ -236,8 +236,8 @@ function buildImage(el, files, into, idPrefix) {
   return { g, clipRect: cr, natural: Math.max(0.8, el.width / 900 + 0.3), startPt: [el.x - 4, el.y + el.height * 0.5], endPt: [el.x + el.width + 4, el.y + el.height * 0.5] };
 }
 
-function buildAll(elements, files, into, idPrefix) {
-  const built = elements.map((el) => {
+/* 按场景元素类型分别构建图形、文字和图片。 */ function buildAll(elements, files, into, idPrefix) {
+  const built = elements.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (el) => {
     if (el.type === 'image') return { el, kind: 'image', ...buildImage(el, files, into, idPrefix) };
     if (el.type === 'text') return { el, kind: 'text', ...buildText(el, into, idPrefix) };
     return { el, kind: 'shape', ...buildShape(el, into) };
@@ -252,20 +252,20 @@ function schedule(built, beatOf, beats, sceneEnd) {
   let cursor = -Infinity;
   for (let bi = 0; bi < beats.length; bi++) {
     const [t0, t1] = beats[bi];
-    const list = built.filter((b, i) => beatOf[i] === bi);
+    const list = built.filter(/* 筛出满足当前检查条件的项，排除不适用数据。 */ (b, i) => beatOf[i] === bi);
     if (!list.length) continue;
     const start = Math.max(t0 + 0.05, cursor);
     const last = bi + 1 >= beats.length;
     const limit = last ? Math.max(t1, sceneEnd - 0.45) : t1 + PEN.overflow * (beats[bi + 1][1] - beats[bi + 1][0]);
     for (const b of list) b.dur = Math.max(PEN.minSeconds, b.natural);
-    const natural = list.reduce((s, b) => s + b.dur, 0) + gap * (list.length - 1);
+    const natural = list.reduce(/* 按当前累计规则汇总集合，避免改变项目顺序。 */ (s, b) => s + b.dur, 0) + gap * (list.length - 1);
     const avail = limit - start;
     const scale = avail < natural ? Math.max(0.3, avail / natural) : 1;
     let t = start;
     for (const b of list) { b.start = t; b.end = t + b.dur * scale; t = b.end + gap * scale; }
     cursor = t;
   }
-  const sched = built.filter((b) => b.start != null).sort((a, b) => a.start - b.start);
+  const sched = built.filter(/* 筛出满足当前检查条件的项，排除不适用数据。 */ (b) => b.start != null).sort(/* 按当前明确键排序，保证导出和校验可复现。 */ (a, b) => a.start - b.start);
   // 兜底：整体仍超出场景末尾就线性压缩
   if (sched.length) {
     const first = sched[0].start, lastEnd = sched[sched.length - 1].end, cap = sceneEnd - 0.1;
@@ -278,19 +278,19 @@ function schedule(built, beatOf, beats, sceneEnd) {
 }
 
 // 画布尺寸（封面用 1080×1440 等）；render.js 同时 setViewportSize
-window.setCanvas = function (w, h) {
+window.setCanvas = /* 设定画布尺寸及当前背景。 */ function (w, h) {
   const svg = document.getElementById('stage');
   svg.setAttribute('width', w); svg.setAttribute('height', h); svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   document.body.style.width = w + 'px'; document.body.style.height = h + 'px';
   for (const id of ['bg1', 'bg2']) { const r = document.getElementById(id); r.setAttribute('width', w); r.setAttribute('height', h); }
 };
-window.setPen = function (opts) { Object.assign(PEN, opts || {}); if (opts && opts.color) document.getElementById('penBody').setAttribute('fill', opts.color); };
+window.setPen = /* 更新绘笔外观及当前配置中的动画参数。 */ function (opts) { Object.assign(PEN, opts || {}); if (opts && opts.color) document.getElementById('penBody').setAttribute('fill', opts.color); };
 
 // 贴纸/Logo 解码完再截图：并行渲染时每页各自装场景，第一帧可能落在图片已露出的时刻
-window.imagesReady = () => Promise.all([...document.querySelectorAll('#layer image, #brand image')].map((im) => im.decode().catch(() => {})));
+window.imagesReady = /* 等待本场景图片完成加载，避免导出缺图帧。 */ () => Promise.all([...document.querySelectorAll('#layer image, #brand image')].map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (im) => im.decode().catch(/* 处理当前异步失败并保持错误可追溯。 */ () => {})));
 
-window.loadScene = function (elements, beatOf, beats, files, sceneEnd) {
-  layer.innerHTML = '';
+window.loadScene = /* 清空旧场景并装载当前绘图、素材和字幕。 */ function (elements, beatOf, beats, files, sceneEnd) {
+  layer.replaceChildren();
   const built = buildAll(elements, files || {}, layer, '');
   items = schedule(built, beatOf, beats, sceneEnd || (beats.length ? beats[beats.length - 1][1] + 0.7 : 5));
   pen.style.display = 'none';
@@ -299,8 +299,8 @@ window.loadScene = function (elements, beatOf, beats, files, sceneEnd) {
 
 // ---- 品牌水印 ----
 // brand: {name, accent, logo?: dataURL, watermark:{position, opacity, size, margin, underline, sparkle}}; window=[t0,t1] 时逐笔画入，否则静态
-window.setBrand = function (brand, drawWindow) {
-  brandLayer.innerHTML = ''; brandItems = [];
+window.setBrand = /* 按当前品牌设置水印与字标元素。 */ function (brand, drawWindow) {
+  brandLayer.replaceChildren(); brandItems = [];
   if (!brand || !brand.watermark || brand.watermark.enabled === false) return 0;
   const wm = brand.watermark;
   const size = wm.size || 36, margin = wm.margin || 56, pos = wm.position || 'top-right';
@@ -316,12 +316,12 @@ window.setBrand = function (brand, drawWindow) {
   const x = pos.endsWith('left') ? margin : 1920 - margin - w;
   const y = pos.startsWith('bottom') ? 940 - h : margin;
   const ink = brand.ink || '#1e1e1e', accent = brand.accent || '#2f9e44';
-  const baseEl = (type, o) => ({ id: 'wm' + els.length, type, angle: 0, strokeColor: ink, backgroundColor: 'transparent', fillStyle: 'solid', strokeWidth: 2, strokeStyle: 'solid', roughness: 1, opacity: 100, seed: 4242 + els.length, roundness: null, ...o });
+  const baseEl = /* 为元素写入共同的场景元数据与绘制参数。 */ (type, o) => ({ id: 'wm' + els.length, type, angle: 0, strokeColor: ink, backgroundColor: 'transparent', fillStyle: 'solid', strokeWidth: 2, strokeStyle: 'solid', roughness: 1, opacity: 100, seed: 4242 + els.length, roundness: null, ...o });
   if (wm.sparkle !== false) {
     const r = size * 0.32, cx = x - r * 0.9, cy = y + r * 0.6;
     const star = [[cx, cy - r], [cx + r * 0.28, cy - r * 0.28], [cx + r, cy], [cx + r * 0.28, cy + r * 0.28], [cx, cy + r], [cx - r * 0.28, cy + r * 0.28], [cx - r, cy], [cx - r * 0.28, cy - r * 0.28], [cx, cy - r]];
-    const xs = star.map((p) => p[0]), ys = star.map((p) => p[1]); const mx = Math.min(...xs), my = Math.min(...ys);
-    els.push(baseEl('line', { x: mx, y: my, width: Math.max(...xs) - mx, height: Math.max(...ys) - my, points: star.map((p) => [p[0] - mx, p[1] - my]), strokeColor: accent, backgroundColor: accent, strokeWidth: 2, roughness: 0.8 }));
+    const xs = star.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (p) => p[0]), ys = star.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (p) => p[1]); const mx = Math.min(...xs), my = Math.min(...ys);
+    els.push(baseEl('line', { x: mx, y: my, width: Math.max(...xs) - mx, height: Math.max(...ys) - my, points: star.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (p) => [p[0] - mx, p[1] - my]), strokeColor: accent, backgroundColor: accent, strokeWidth: 2, roughness: 0.8 }));
   }
   if (brand.logo) {
     els.push(baseEl('image', { x, y, width: w, height: h, fileId: 'wmlogo', roughness: 0 }));
@@ -336,12 +336,12 @@ window.setBrand = function (brand, drawWindow) {
   const built = buildAll(els, files, brandLayer, 'b');
   // 文字实际宽度可能与估算不同：靠右时整体平移对齐右边距
   if (!brand.logo && !pos.endsWith('left')) {
-    const tb = built.find((b) => b.kind === 'text');
+    const tb = built.find(/* 查找满足当前身份或边界条件的首个匹配项。 */ (b) => b.kind === 'text');
     const dx = (x + w) - (tb.parts[0].x0 + tb.parts[0].width);
     if (Math.abs(dx) > 1) brandLayer.setAttribute('transform', `translate(${dx.toFixed(1)},0)`);
     else brandLayer.removeAttribute('transform');
   } else brandLayer.removeAttribute('transform');
-  const total = built.reduce((s, b) => s + Math.max(0.25, b.natural), 0);
+  const total = built.reduce(/* 按当前累计规则汇总集合，避免改变项目顺序。 */ (s, b) => s + Math.max(0.25, b.natural), 0);
   let t = drawWindow ? drawWindow[0] : -10;
   const span = drawWindow ? (drawWindow[1] - drawWindow[0]) : 1;
   for (const b of built) { const d = Math.max(0.25, b.natural) / total * span; b.start = t; b.end = t + d; t = b.end; }
@@ -349,7 +349,7 @@ window.setBrand = function (brand, drawWindow) {
   return built.length;
 };
 
-function setStrokeProgress(p, f) {
+/* 按当前进度显示路径并计算笔尖位置。 */ function setStrokeProgress(p, f) {
   const n = p.node;
   if (p.type === 'fill') { n.style.opacity = f <= 0 ? 0 : clamp01(f); return null; }
   if (p.type === 'fade') { n.style.opacity = f <= 0 ? 0 : clamp01(f * 1.5); return null; }
@@ -385,13 +385,13 @@ function progressItem(b, f) {
     const split = no && nf ? 0.7 : (no ? 1 : 0);
     const fo = no ? f / split : 0;
     const ff = nf ? (f - split) / (1 - split || 1) : 0;
-    const totalLen = b.outline.reduce((s, p) => s + p.len, 0) || 1;
+    const totalLen = b.outline.reduce(/* 按当前累计规则汇总集合，避免改变项目顺序。 */ (s, p) => s + p.len, 0) || 1;
     let acc = 0;
     for (const p of b.outline) {
       const s0 = acc / totalLen, s1 = (acc + p.len) / totalLen; acc += p.len;
       const tp = setStrokeProgress(p, (fo - s0) / (s1 - s0)); if (tp) tip = tp;
     }
-    const totalF = b.fills.reduce((s, p) => s + (p.len || 300), 0) || 1;
+    const totalF = b.fills.reduce(/* 按当前累计规则汇总集合，避免改变项目顺序。 */ (s, p) => s + (p.len || 300), 0) || 1;
     acc = 0;
     for (const p of b.fills) {
       const L = p.len || 300;
@@ -427,12 +427,12 @@ function travelTip(list, t) {
 
 const captionEl = document.getElementById('caption');
 let cues = [];
-window.setCaptions = function (list, style) {
+window.setCaptions = /* 载入本场景已对齐的字幕和字幕安全区设置。 */ function (list, style) {
   cues = list || [];
   if (style) { captionEl.setAttribute('font-size', style.fontSize); captionEl.setAttribute('y', style.baselineY); }
 };
-function updateCaption(t) {
-  const c = cues.find((q) => t >= q.start && t < q.end);
+/* 在本帧只显示对应真实时间窗口内的整句字幕。 */ function updateCaption(t) {
+  const c = cues.find(/* 查找满足当前身份或边界条件的首个匹配项。 */ (q) => t >= q.start && t < q.end);
   if (c) { if (captionEl.textContent !== c.text) captionEl.textContent = c.text; captionEl.style.display = ''; }
   else captionEl.style.display = 'none';
 }

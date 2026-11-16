@@ -1,0 +1,11 @@
+{
+  "name": "personal-media-ip-maintenance",
+  "version": "0.2.0",
+  "private": true,
+  "description": "个人自媒体工作流的离线维护与中文注释检查工具",
+  "scripts": {
+    "check:comments": "node scripts/check_comments.mjs",
+    "test:narration": "node tests/test_narration.mjs"
+  },
+  "devDependencies": {"@babel/parser": "7.29.0"}
+}

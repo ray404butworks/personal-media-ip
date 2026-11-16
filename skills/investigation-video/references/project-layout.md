@@ -1,3 +1,5 @@
+> 当前配音用根docs/声音接入.md：受众审查与每期锁声优先，以下历史目录中的s20仅是文件名示例，不代表强制1.2倍或固定刘飞声音。
+
 # 项目文件夹结构（2026-09-14 定版）
 
 一期一个工程目录加一个知识库目录。工程只放后台工序、大文件与冻结交付；正文、来源、文案、封面、复盘只在知识库维护，工程里用软链接指过去。新项目复制上一期工程后按此清理。
@@ -17,7 +19,7 @@ work/
     screen/                     本片录屏（Playwright recordVideo）与其拼板
   production/
     sentences.json              由知识库口播稿正则生成，id sNNN / sNNNa
-    tts-s20.mjs                 火山合成，speech_rate=20；跳过已存在句
+    根scripts/narration.mjs                 火山合成，speech_rate=20；按正文、音色、语速与音频指纹核对缓存
     audio-s20/<id>.wav|.json    单句音频与元数据（json 含 words 逐字时间戳）
     audio-manifest-s20.json     全部句子的时长与 words
     preview-*.mp3               无停顿拼接试听

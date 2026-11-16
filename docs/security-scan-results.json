@@ -1,0 +1,328 @@
+{
+  "date": "2026-11-17",
+  "npm": {
+    "maintenance": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "dependencies": {
+        "prod": 1,
+        "dev": 4,
+        "optional": 0,
+        "peer": 0,
+        "peerOptional": 0,
+        "total": 4
+      }
+    },
+    "whiteboard": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "dependencies": {
+        "prod": 9,
+        "dev": 0,
+        "optional": 1,
+        "peer": 0,
+        "peerOptional": 0,
+        "total": 9
+      }
+    },
+    "investigation": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "dependencies": {
+        "prod": 240,
+        "dev": 0,
+        "optional": 52,
+        "peer": 0,
+        "peerOptional": 0,
+        "total": 291
+      }
+    }
+  },
+  "python": {
+    "dependencies": [
+      {
+        "name": "pillow",
+        "version": "13.0.0",
+        "vulns": []
+      }
+    ],
+    "fixes": []
+  },
+  "bandit": {
+    "high": 0,
+    "medium": 0,
+    "low": 28,
+    "findings": [
+      {
+        "file": "scripts\\finalize_outputs.py",
+        "line": 3,
+        "rule": "B404",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\finalize_outputs.py",
+        "line": 39,
+        "rule": "B607",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\finalize_outputs.py",
+        "line": 39,
+        "rule": "B603",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\finalize_outputs.py",
+        "line": 42,
+        "rule": "B607",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\finalize_outputs.py",
+        "line": 42,
+        "rule": "B603",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\import_narration.py",
+        "line": 3,
+        "rule": "B404",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\import_narration.py",
+        "line": 40,
+        "rule": "B607",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\import_narration.py",
+        "line": 40,
+        "rule": "B603",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\import_narration.py",
+        "line": 44,
+        "rule": "B607",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\import_narration.py",
+        "line": 44,
+        "rule": "B603",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\import_narration.py",
+        "line": 45,
+        "rule": "B607",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\import_narration.py",
+        "line": 45,
+        "rule": "B603",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\onboarding.py",
+        "line": 219,
+        "rule": "B404",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\onboarding.py",
+        "line": 220,
+        "rule": "B603",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\release_audit.py",
+        "line": 3,
+        "rule": "B404",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\release_audit.py",
+        "line": 10,
+        "rule": "B607",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\release_audit.py",
+        "line": 10,
+        "rule": "B603",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\release_audit.py",
+        "line": 53,
+        "rule": "B607",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\release_audit.py",
+        "line": 53,
+        "rule": "B603",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\wb.py",
+        "line": 4,
+        "rule": "B404",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "scripts\\wb.py",
+        "line": 11,
+        "rule": "B603",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "skills/investigation-video/scripts\\clipcheck.py",
+        "line": 1,
+        "rule": "B404",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "skills/investigation-video/scripts\\clipcheck.py",
+        "line": 19,
+        "rule": "B603",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "skills/investigation-video/scripts\\qa.py",
+        "line": 2,
+        "rule": "B404",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "skills/investigation-video/scripts\\qa.py",
+        "line": 8,
+        "rule": "B607",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "skills/investigation-video/scripts\\qa.py",
+        "line": 8,
+        "rule": "B603",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "skills/investigation-video/scripts\\qa.py",
+        "line": 12,
+        "rule": "B603",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      },
+      {
+        "file": "skills/investigation-video/scripts\\qa.py",
+        "line": 23,
+        "rule": "B603",
+        "severity": "LOW",
+        "review": "本地可信工具的参数数组调用，无shell=True；核对执行文件来源和受限输入。"
+      }
+    ],
+    "scanErrors": []
+  },
+  "runtime": [
+    {
+      "mode": "remotion",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_type": "video",
+            "width": 1920,
+            "height": 1080,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "6.000000"
+        }
+      },
+      "fullDecode": true
+    },
+    {
+      "mode": "whiteboard",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_type": "video",
+            "width": 1920,
+            "height": 1080,
+            "r_frame_rate": "30/1"
+          },
+          {
+            "codec_type": "audio",
+            "r_frame_rate": "0/0"
+          }
+        ],
+        "format": {
+          "duration": "8.521029"
+        }
+      },
+      "fullDecode": true
+    }
+  ],
+  "svgIsolation": {
+    "javascriptDisabled": true,
+    "networkBlocked": true,
+    "blockedRequests": 1,
+    "eventHandlerExecuted": false
+  },
+  "unitTests": 28,
+  "narrationAndCaptionChecks": "passed; network blocked; no live charge",
+  "realDeliveryPackageRegression": "passed using the locally completed film, private fixture excluded from release",
+  "independentHumanReview": "not performed by the agent"
+}

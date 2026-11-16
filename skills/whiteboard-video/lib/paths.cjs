@@ -6,11 +6,11 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, 'config.json')));
-const expand = (p) => { const e = p.replace(/^~/, process.env.HOME || process.env.USERPROFILE || ''); return path.isAbsolute(e) ? e : path.join(ROOT, e); };
+const expand = /* 展开用户目录并解析相对项目路径，保留可迁移配置。 */ (p) => { const e = p.replace(/^~/, process.env.HOME || process.env.USERPROFILE || ''); return path.isAbsolute(e) ? e : path.join(ROOT, e); };
 const PROJECTS_DIR = expand(cfg.dirs.projects);
 const BUILD_DIR = expand(cfg.dirs.build);
 
-function projectPaths(projectDir) {
+/* 按当前工程名生成源目录、中间文件及成片路径。 */ function projectPaths(projectDir) {
   const project = path.resolve(projectDir);
   const name = path.basename(project);
   const studio = path.join(BUILD_DIR, name);   // 本期的后台目录
@@ -36,14 +36,14 @@ function resolveProject(arg) {
   if (fs.existsSync(arg) && fs.statSync(arg).isDirectory()) return path.resolve(arg);
   const direct = path.join(PROJECTS_DIR, arg);
   if (fs.existsSync(direct)) return direct;
-  const list = fs.readdirSync(PROJECTS_DIR).filter((d) => fs.statSync(path.join(PROJECTS_DIR, d)).isDirectory() && !d.startsWith('.'));
-  const hit = list.filter((d) => d.toLowerCase().includes(arg.toLowerCase())).sort();
+  const list = fs.readdirSync(PROJECTS_DIR).filter(/* 筛出满足当前检查条件的项，排除不适用数据。 */ (d) => fs.statSync(path.join(PROJECTS_DIR, d)).isDirectory() && !d.startsWith('.'));
+  const hit = list.filter(/* 筛出满足当前检查条件的项，排除不适用数据。 */ (d) => d.toLowerCase().includes(arg.toLowerCase())).sort();
   if (!hit.length) throw new Error(`找不到项目「${arg}」，现有：${list.join(' | ')}`);
   return path.join(PROJECTS_DIR, hit[hit.length - 1]);
 }
 
-function listProjects() {
-  return fs.readdirSync(PROJECTS_DIR).filter((d) => fs.existsSync(path.join(PROJECTS_DIR, d, 'scenes.js'))).sort();
+/* 枚举已存在的工程目录，不扫描其他私人文件。 */ function listProjects() {
+  return fs.readdirSync(PROJECTS_DIR).filter(/* 筛出满足当前检查条件的项，排除不适用数据。 */ (d) => fs.existsSync(path.join(PROJECTS_DIR, d, 'scenes.js'))).sort();
 }
 
 module.exports = { ROOT, cfg, PROJECTS_DIR, BUILD_DIR, projectPaths, resolveProject, listProjects, expand };

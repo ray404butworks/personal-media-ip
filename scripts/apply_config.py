@@ -3,12 +3,18 @@ from pathlib import Path
 import json, shutil, argparse
 
 ROOT=Path(__file__).resolve().parents[1]
-def load(p):return json.loads(p.read_text(encoding='utf-8-sig'))
-def save(p,data):p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+def load(p):
+    """读取UTF8配置并解析JSON。"""
+    return json.loads(p.read_text(encoding='utf-8-sig'))
+def save(p,data):
+    """创建目标目录并保存可读中文JSON。"""
+    p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 def resolve(p):
+ """将配置路径解析为当前仓库内或用户指定的绝对位置。"""
  path=Path(p).expanduser()
  return path if path.is_absolute() else (ROOT/path).resolve()
 def apply(config=None):
+ """校验并同步品牌、字体、声音、音乐及写作配置。"""
  source=Path(config).resolve() if config else ROOT/'config.json'
  c=load(source)
  if c['tts']['engine'] not in {'external','chatcut','volc'}:raise ValueError('tts.engine must be external, chatcut, or volc')
@@ -21,7 +27,10 @@ def apply(config=None):
   if not re.fullmatch(r'#[0-9a-fA-F]{6}',b[key]):raise ValueError('brand.'+key+' requires #RRGGBB')
  wb=ROOT/'skills/whiteboard-video'
  d=load(wb/'config.defaults.json')
- for key in ('render','captions','cover','tts'):d[key]=c[key]
+ for key in ('render','captions','cover','tts'):d[key]=json.loads(json.dumps(c[key]))
+ if c['tts']['engine']=='volc':
+  vp=d['tts'].setdefault('voicePolicy',{'enabled':False})
+  vp['module']=str(ROOT/'scripts/narration.mjs');vp['file']=str(ROOT/'workflow/旁白音色配置.json')
  d['dirs']={k:str(resolve(c['dirs'][k])) for k in ('projects','build')}
  d['brand']=json.loads(json.dumps(b));d['bgm']=json.loads(json.dumps(c['bgm']))
  d['bgm']['file']=str(resolve(c['bgm']['file'])) if c['bgm'].get('enabled',True) else ''

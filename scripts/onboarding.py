@@ -21,7 +21,8 @@ LABELS={
  'brand.logo':('透明Logo','有自己的透明PNG Logo吗？有就提供本机路径，没有可留空。'),
  'brand.slogan':('品牌口号','需要固定品牌口号吗？没有可留空。'),
  'brand.endCard.cta':('片尾引导语','片尾需要什么引导语？没有可留空。'),
- 'tts.engine':('旁白来源','旁白选火山引擎、ChatCut克隆音色，还是其他服务的音轨？'),
+ 'tts.engine':('旁白来源','默认火山官方音色，由AI判断受众后选择；也可明确改用自己的声音服务。'),
+ 'tts.voicePolicy.enabled':('AI按受众选声','保留AI按受众选声、每期随机一次并锁定吗？默认开启。'),
  'tts.voice':('火山音色ID','选择哪个火山音色ID？API密钥请只写入本机.env，不要发在对话里。'),
  'tts.resourceId':('火山资源ID','火山资源ID使用官方2.0还是声音复刻资源？'),
  'tts.voiceName':('旁白音色名称','你想使用的旁白音色叫什么名字？'),
@@ -50,24 +51,28 @@ PRIORITY=['config:brand.name','config:writing.videoStyle','config:writing.wechat
  'config:tts.engine','config:tts.voiceName','config:tts.voice','config:tts.resourceId','config:tts.customVoiceId','config:tts.speed','config:tts.externalManifest','config:bgm.enabled','config:bgm.file']
 
 def get(data,path):
+ """按字段路径读取嵌套配置。"""
  for key in path.split('.'):data=data[int(key)] if isinstance(data,list) else data[key]
  return data
 def set_value(data,path,value):
+ """更新指定配置字段，支持对象与数组索引。"""
  keys=path.split('.');node=data
  for key in keys[:-1]:node=node[int(key)] if isinstance(node,list) else node[key]
  if isinstance(node,list):node[int(keys[-1])]=value
  else:node[keys[-1]]=value
 def leaves(data,prefix=''):
+ """枚举实际可配置的叶字段，跳过说明元数据。"""
  for key,value in data.items():
   if key in META:continue
   path=f'{prefix}.{key}' if prefix else key
   if isinstance(value,dict):yield from leaves(value,path)
   else:yield path,value
 def steps(c,w):
+ """根据当前配置生成逐项引导步骤，避免重复询问派生字段。"""
  result=[]
  for path,value in leaves(c):
   # Derived duplicates are controlled by brand.graphic rather than asked twice.
-  if path in {'brand.watermark.sparkle','brand.watermark.underline'}:continue
+  if path in {'brand.watermark.sparkle','brand.watermark.underline','tts.voicePolicy.file','tts.voicePolicy.module'}:continue
   result.append({'id':'config:'+path,'file':'config','path':path,'value':value})
  for path,value in leaves(w):
   if path in {'videoScript.style','wechatArticle.style','reviewSequence'}:continue
@@ -82,11 +87,15 @@ def steps(c,w):
   if path=='wechatArticle.name' or path=='wechatArticle.type':continue
   result.append({'id':'workflow:'+path,'file':'workflow','path':path,'value':value})
  order={x:i for i,x in enumerate(PRIORITY)}
+ # 按配置问题优先级排序，匿名函数只读取步骤ID。
  return sorted(result,key=lambda s:order.get(s['id'],len(PRIORITY)))
 def active(step,c):
+ """根据当前声源、品牌及开关筛出适用的配置问题。"""
  p=step['path'];engine=c['tts']['engine']
  if step['file']=='workflow':return True
- if p in {'tts.voice','tts.resourceId'}:return engine=='volc'
+ if p=='tts.voicePolicy.enabled':return engine=='volc'
+ if p=='tts.voice':return engine=='volc' and not c['tts'].get('voicePolicy',{}).get('enabled',False)
+ if p=='tts.resourceId':return engine=='volc'
  if p=='tts.customVoiceId':return engine=='chatcut'
  if p=='tts.voiceName':return engine!='volc'
  if p=='tts.externalManifest':return engine in {'chatcut','external'}
@@ -96,29 +105,40 @@ def active(step,c):
  if p.startswith('brand.endCard.') and p!='brand.endCard.enabled':return c['brand']['endCard']['enabled']
  return True
 def describe(step):
+ """将配置字段转换为面向使用者的一次一项问题。"""
  path=step['path'];title,question=LABELS.get(path,(None,None))
  if not title:
   pieces=[TERMS.get(x,x) for x in path.split('.') if not x.isdigit()]
   title=(step.get('platform','')+' '+ ' / '.join(pieces)).strip()
   question=f'{title}要怎么设置？可以明确说“保留默认”。'
  return {'id':step['id'],'title':title,'question':question,'current':step['value'],'configFile':'config.json' if step['file']=='config' else 'workflow/文案编写配置.json','path':path}
-def fingerprint(c,w):return hashlib.sha256(json.dumps([c,w],sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+def fingerprint(c,w):
+    """计算当前配置指纹，防止向导覆盖外部修改。"""
+    return hashlib.sha256(json.dumps([c,w],sort_keys=True,ensure_ascii=False).encode()).hexdigest()
 
 class Wizard:
  def __init__(self,root=ROOT):
+  """初始化本机向导状态位置，不修改用户已确认配置。"""
   self.root=Path(root).resolve();self.statefile=self.root/'.local/onboarding.json'
  def read(self):
+  """读取本机进度，首次使用时建立可续接草稿。"""
   if self.statefile.exists():return load(self.statefile)
   c=load(self.root/'config.json');w=load(self.root/c['writing']['workflowFile'])
   state={'version':1,'status':'in_progress','config':c,'workflow':w,'reviewed':{},'baseFingerprint':fingerprint(c,w)}
   self.persist(state);return state
- def persist(self,s):save(self.statefile,s)
- def pending(self,s):return [x for x in steps(s['config'],s['workflow']) if active(x,s['config']) and x['id'] not in s['reviewed']]
+ def persist(self,s):
+     """保存当前草稿与已回答步骤。"""
+     save(self.statefile,s)
+ def pending(self,s):
+     """只返回尚未回答且当前适用的问题。"""
+     return [x for x in steps(s['config'],s['workflow']) if active(x,s['config']) and x['id'] not in s['reviewed']]
  def next(self):
+  """返回当前唯一待答项，未回答不擅自推进。"""
   s=self.read();remaining=self.pending(s)
   return {'status':s['status'],'reviewed':len(s['reviewed']),'remaining':len(remaining),'next':describe(remaining[0]) if remaining else None,
           'instruction':'Ask ONLY this item and wait for an explicit answer. Do not synthesize or render during setup.' if remaining else 'Show final summary; finish saves and synchronizes the draft.'}
  def validate(self,step,value,s):
+  """校验当前问题答案的类型、范围和本机文件。"""
   old=step['value'];p=step['path']
   if p=='platforms':
    if not isinstance(value,list) or not value or not all(isinstance(x,str) and x.strip() for x in value) or len(set(value))!=len(value):raise ValueError('Platforms need a nonempty unique list of names')
@@ -150,6 +170,7 @@ class Wizard:
   if p=='writing.scopeNotes' and value not in {'screen-only','spoken'}:raise ValueError('Use screen-only or spoken')
   if p=='brand.watermark.position' and value not in {'top-right','top-left','bottom-right','bottom-left'}:raise ValueError('Unknown watermark position')
  def answer(self,step_id,value=None,keep=False):
+  """只接受当前问题的明确答案，然后持久化并推进。"""
   s=self.read()
   if s['status']=='completed':raise ValueError('Use reset to configure again; completed setup is not reopened automatically')
   pending=self.pending(s)
@@ -165,11 +186,13 @@ class Wizard:
   s['reviewed'][step_id]={'choice':'keep' if keep else 'changed'}
   self.persist(s);return self.next()
  def keep_remaining(self,confirmed=False):
+  """仅在用户明确授权后保留所有剩余默认。"""
   if not confirmed:raise ValueError('Only after the user explicitly says to keep all remaining defaults')
   s=self.read()
   for step in self.pending(s):s['reviewed'][step['id']]={'choice':'keep_remaining'}
   self.persist(s);return self.next()
  def revise(self,step_id,value):
+  """修改已回答项目并重建受其影响的后续问题。"""
   s=self.read()
   if s['status']=='completed':raise ValueError('Use reset for a completed setup')
   step=next((x for x in steps(s['config'],s['workflow']) if x['id']==step_id),None)
@@ -182,6 +205,7 @@ class Wizard:
   else:set_value(s[step['file']],step['path'],value)
   s['reviewed'][step_id]={'choice':'revised'};self.persist(s);return self.next()
  def finish(self):
+  """全部回答后同步配置，失败回退且保留草稿。"""
   s=self.read()
   if s['status']=='completed':return {'status':'completed','instruction':'Already configured; do not ask the setup questions again.'}
   if self.pending(s):raise ValueError('Unanswered items remain')
@@ -201,6 +225,7 @@ class Wizard:
   return {'status':'completed','reviewed':len(s['reviewed']),'instruction':'Summarize the saved account settings; separately check assets, services and runtime readiness before production.'}
 
 def main():
+ """解析命令行参数并执行本入口，失败保持非零退出。"""
  p=argparse.ArgumentParser();sub=p.add_subparsers(dest='action',required=True)
  for name in ('next','status','summary','finish','reset'):sub.add_parser(name)
  a=sub.add_parser('answer');a.add_argument('--id',required=True);group=a.add_mutually_exclusive_group(required=True);group.add_argument('--value-json');group.add_argument('--keep',action='store_true')

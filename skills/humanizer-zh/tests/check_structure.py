@@ -7,6 +7,7 @@ from pathlib import Path
 
 
 def protected_parts(text):
+    """提取文稿中不能被润色改写的保护片段。"""
     frontmatter = re.match(r"\A---\n.*?\n---\n", text, re.S)
     return {
         "frontmatter": frontmatter.group(0) if frontmatter else None,
@@ -21,6 +22,7 @@ def protected_parts(text):
 
 
 def main():
+    """解析命令行参数并执行本入口，失败保持非零退出。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path)
     parser.add_argument("edited", type=Path)

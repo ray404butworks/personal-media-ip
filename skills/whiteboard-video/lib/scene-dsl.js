@@ -15,12 +15,12 @@ const C = {
 };
 
 let seedCounter = 1000;
-const nextSeed = () => (seedCounter = (seedCounter * 9301 + 49297) % 233280) + 1;
+const nextSeed = /* 生成可复现的手绘随机种子，使逐帧渲染保持稳定。 */ () => (seedCounter = (seedCounter * 9301 + 49297) % 233280) + 1;
 let idCounter = 0;
-const nextId = () => 'el' + (++idCounter).toString(36).padStart(6, '0');
+const nextId = /* 生成场景内唯一元素ID，避免动画元素互相覆盖。 */ () => 'el' + (++idCounter).toString(36).padStart(6, '0');
 
-const isCJK = (ch) => /[　-鿿＀-￯]/.test(ch);
-function measure(text, fs) {
+const isCJK = /* 识别中日韩字符，用于文本测量和绘制节奏。 */ (ch) => /[　-鿿＀-￯]/.test(ch);
+/* 按字符类别估算绘图文字宽度，仅用于排版。 */ function measure(text, fs) {
   const lines = text.split('\n');
   let w = 0;
   for (const l of lines) {
@@ -31,7 +31,7 @@ function measure(text, fs) {
   return { width: Math.round(w), height: Math.round(fs * 1.25 * lines.length) };
 }
 
-function base(type, x, y, w, h, o = {}) {
+/* 建立带统一手绘参数的基础图形元素。 */ function base(type, x, y, w, h, o = {}) {
   return {
     id: nextId(), type, x, y, width: w, height: h, angle: 0,
     strokeColor: o.stroke || C.ink, backgroundColor: o.fill || 'transparent',
@@ -44,24 +44,24 @@ function base(type, x, y, w, h, o = {}) {
 }
 
 class Scene {
-  constructor(name, narration) {
+  /* 初始化当前场景的元素、段落和布局状态。 */ constructor(name, narration) {
     this.name = name;
-    this.segments = narration.split('|').map((s) => s.trim()).filter(Boolean);
+    this.segments = narration.split('|').map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (s) => s.trim()).filter(Boolean);
     this.elements = [];
     this.files = {};
     this.assetsDir = null;
     this.beatOf = []; // element index -> beat index
     this.beat = -1;
   }
-  nextBeat() { this.beat++; return this; }
-  push(el) {
+  /* 进入下一叙事段落并保持已有元素的身份。 */ nextBeat() { this.beat++; return this; }
+  /* 将已构造元素加入当前场景并保留绘制顺序。 */ push(el) {
     if (this.beat < 0) throw new Error('call nextBeat() first');
     this.elements.push(el); this.beatOf.push(this.beat); return el;
   }
-  rect(x, y, w, h, o = {}) { return this.push(base('rectangle', x, y, w, h, o)); }
-  ellipse(x, y, w, h, o = {}) { return this.push(base('ellipse', x, y, w, h, o)); }
-  diamond(x, y, w, h, o = {}) { return this.push(base('diamond', x, y, w, h, o)); }
-  text(x, y, str, o = {}) {
+  /* 创建矩形手绘元素，样式从当前场景配置继承。 */ rect(x, y, w, h, o = {}) { return this.push(base('rectangle', x, y, w, h, o)); }
+  /* 创建椭圆手绘元素，保留当前位置和尺寸。 */ ellipse(x, y, w, h, o = {}) { return this.push(base('ellipse', x, y, w, h, o)); }
+  /* 创建菱形元素，供流程或决策关系表达。 */ diamond(x, y, w, h, o = {}) { return this.push(base('diamond', x, y, w, h, o)); }
+  /* 创建具有明确位置、字体和颜色的场景文本。 */ text(x, y, str, o = {}) {
     const fs = o.size || 36;
     const m = measure(str, fs);
     let tx = x;
@@ -74,19 +74,19 @@ class Scene {
     });
     return this.push(el);
   }
-  line(points, o = {}) {
-    const xs = points.map((p) => p[0]), ys = points.map((p) => p[1]);
+  /* 创建折线或手绘路径，连接关系须来自本期事实。 */ line(points, o = {}) {
+    const xs = points.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (p) => p[0]), ys = points.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (p) => p[1]);
     const x = Math.min(...xs), y = Math.min(...ys);
     const el = base(o.arrow ? 'arrow' : 'line', x, y, Math.max(...xs) - x, Math.max(...ys) - y, o);
     if (o.round) el.roundness = { type: 2 };
     Object.assign(el, {
-      points: points.map((p) => [p[0] - x, p[1] - y]), lastCommittedPoint: null,
+      points: points.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (p) => [p[0] - x, p[1] - y]), lastCommittedPoint: null,
       startBinding: null, endBinding: null, startArrowhead: o.startHead || null,
       endArrowhead: o.arrow ? 'arrow' : null, elbowed: false,
     });
     return this.push(el);
   }
-  arrow(points, o = {}) { return this.line(points, { ...o, arrow: true }); }
+  /* 创建带箭头的关系线，方向依本期叙事定义。 */ arrow(points, o = {}) { return this.line(points, { ...o, arrow: true }); }
   // 贴纸图片：name 对应 <project>/assets/<name>.png（gen-image.mjs 产物）。给 w 或 h 之一按原图比例算另一个。
   image(x, y, name, o = {}) {
     const file = path.join(projectPaths(module.exports.projectDir).assets, `${name}.png`);
@@ -128,7 +128,7 @@ class Scene {
     this.line([[x + 60 * s, y + 110 * s], [x + 85 * s, y + 122 * s], [x + 115 * s, y + 122 * s], [x + 140 * s, y + 110 * s]], { stroke: col, round: true });
     if (!o.headOnly) this.rect(x + 30 * s, y + 160 * s, 140 * s, 90 * s, { stroke: col, round: true, fill: C.fGray });
   }
-  laptop(x, y, s = 1, o = {}) {
+  /* 绘制电脑示意元素，仅作说明图形。 */ laptop(x, y, s = 1, o = {}) {
     this.rect(x, y, 260 * s, 160 * s, { round: true, fill: o.screen || C.fGray, ...o });
     this.rect(x - 20 * s, y + 160 * s, 300 * s, 22 * s, { round: true, fill: C.fGray, fillStyle: 'solid' });
   }
@@ -144,25 +144,25 @@ class Scene {
     }
     return this.line(pts, { fill: o.fill || '#fff', fillStyle: 'solid', ...o });
   }
-  person(x, y, s = 1, o = {}) {
+  /* 绘制人物示意元素，避免冒充真实人物证据。 */ person(x, y, s = 1, o = {}) {
     this.ellipse(x, y, 60 * s, 60 * s, { fill: o.fill || C.fYellow, fillStyle: 'solid', ...o });
     this.line([[x + 30 * s, y + 60 * s], [x + 30 * s, y + 140 * s]], o);
     this.line([[x - 20 * s, y + 90 * s], [x + 30 * s, y + 75 * s], [x + 80 * s, y + 90 * s]], o);
     this.line([[x + 0 * s, y + 200 * s], [x + 30 * s, y + 140 * s], [x + 60 * s, y + 200 * s]], o);
   }
-  checkbox(x, y, label, o = {}) {
+  /* 绘制勾选项，表达当前场景已声明的检查状态。 */ checkbox(x, y, label, o = {}) {
     this.rect(x, y, 40, 40, { round: true, fill: o.fill || C.fGreen, fillStyle: 'solid' });
     this.line([[x + 8, y + 20], [x + 17, y + 31], [x + 34, y + 8]], { stroke: C.green, strokeWidth: 3 });
     this.text(x + 60, y - 6, label, { size: o.size || 40 });
   }
-  moon(cx, cy, r) {
+  /* 绘制月亮装饰元素，不作调查事实。 */ moon(cx, cy, r) {
     const pts = [];
     for (let k = 0; k <= 24; k++) { const a = Math.PI * 0.35 + (k / 24) * Math.PI * 1.35; pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
     for (let k = 24; k >= 0; k--) { const a = Math.PI * 0.35 + (k / 24) * Math.PI * 1.35; pts.push([cx + 0.45 * r + Math.cos(a) * r * 0.8, cy - 0.1 * r + Math.sin(a) * r * 0.8]); }
     pts.push(pts[0]);
     return this.line(pts, { fill: C.fYellow, fillStyle: 'solid', stroke: C.orange });
   }
-  squiggle(x1, x2, y, o = {}) {
+  /* 绘制手绘强调线，保留统一粗细与颜色。 */ squiggle(x1, x2, y, o = {}) {
     const pts = [];
     for (let px = x1; px <= x2; px += 12) pts.push([px, y + Math.sin((px - x1) / 12) * 5]);
     return this.line(pts, { stroke: o.color || C.red, strokeWidth: 3 });
@@ -196,10 +196,10 @@ class Scene {
     const [cw, ch] = coverSize(ratio);
     const portrait = ch > cw;
     const cv = cfg.cover || {};
-    const lines = String(o.title || '').split('\n').map((l) => l.trim()).filter(Boolean);
+    const lines = String(o.title || '').split('\n').map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (l) => l.trim()).filter(Boolean);
     const accentIdx = o.accent == null ? lines.length - 1 : o.accent;
     const accentColor = o.color || C.brand, hl = o.highlight || C.fYellow;
-    const maxLen = Math.max(...lines.map((l) => [...l].reduce((n, ch) => n + (isCJK(ch) ? 1 : 0.55), 0)));
+    const maxLen = Math.max(...lines.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (l) => [...l].reduce(/* 按当前累计规则汇总集合，避免改变项目顺序。 */ (n, ch) => n + (isCJK(ch) ? 1 : 0.55), 0)));
     if (cv.frame !== false) this.rect(28, 28, cw - 56, ch - 56, { stroke: cv.frameColor || C.ink, strokeWidth: 7, roughness: 1.6, round: true });
     const tag = o.tag === undefined ? cv.seriesTag : o.tag;
     if (portrait) {
@@ -208,7 +208,7 @@ class Scene {
       if (tag) { const tw = measure(tag, 40).width + 60; this.rect(cw / 2 - tw / 2, y, tw, 74, { round: true, fill: C.fYellow, fillStyle: 'solid' }); this.text(cw / 2, y + 16, tag, { size: 40, align: 'center' }); y += 130; }
       const size = Math.min(170, Math.floor((cw - 120) / Math.max(4, maxLen)));
       const lh = size * 1.22;
-      lines.forEach((l, i) => {
+      lines.forEach(/* 逐项执行当前操作，不把部分成功当作全量通过。 */ (l, i) => {
         const w = measure(l, size).width;
         if (i === accentIdx) this.highlight(cw / 2 - w / 2 - 18, y + i * lh + size * 0.42, w + 36, size * 0.62, { color: hl });
         this.text(cw / 2, y + i * lh, l, { size, align: 'center', color: i === accentIdx ? accentColor : C.ink });
@@ -232,7 +232,7 @@ class Scene {
       const size = Math.min(Math.round(ch * 0.15), Math.floor((cw - 220) / Math.max(4, maxLen)));
       const lh = size * 1.2;
       const rows = [];
-      lines.forEach((l, i) => {
+      lines.forEach(/* 逐项执行当前操作，不把部分成功当作全量通过。 */ (l, i) => {
         const w = measure(l, size).width;
         if (i === accentIdx) this.highlight(110 - 18, y + i * lh + size * 0.42, w + 36, size * 0.62, { color: hl });
         this.text(110, y + i * lh, l, { size, color: i === accentIdx ? accentColor : C.ink });
@@ -241,12 +241,12 @@ class Scene {
       y += lines.length * lh + 10;
       if (o.sub) { const w = measure(o.sub, 44).width; this.text(114, y, o.sub, { size: 44, color: C.gray }); rows.push({ right: 114 + w, bottom: y + 50 }); y += 80; }
       if (o.sticker) {
-        const asp = (() => { const d = this.imageSize(o.sticker); return d.w / d.h; })();
+        const asp = (/* 处理本步骤的局部数据转换，返回值用于紧邻的调用流程。 */ () => { const d = this.imageSize(o.sticker); return d.w / d.h; })();
         const bottom = ch - 70, right = cw - 100;
         let h = Math.round(ch * 0.55);
         for (; h > ch * 0.25; h -= 10) {
           const top = bottom - h, left = right - h * asp;
-          if (!rows.some((r) => r.right > left && r.bottom > top)) break;
+          if (!rows.some(/* 检查是否至少有一项满足当前校验条件。 */ (r) => r.right > left && r.bottom > top)) break;
         }
         this.image(right - (h * asp) / 2, bottom - h, o.sticker, { h, align: 'center' });
       }
@@ -261,7 +261,7 @@ class Scene {
       const lh = size * 1.2;
       const blockH = lines.length * lh + (o.sub ? 90 : 0);
       y = Math.max(y, (ch - 160 - y - blockH) / 2 + y - 20);
-      lines.forEach((l, i) => {
+      lines.forEach(/* 逐项执行当前操作，不把部分成功当作全量通过。 */ (l, i) => {
         const w = measure(l, size).width;
         if (i === accentIdx) this.highlight(110 - 18, y + i * lh + size * 0.42, w + 36, size * 0.62, { color: hl });
         this.text(110, y + i * lh, l, { size, color: i === accentIdx ? accentColor : C.ink });
@@ -273,10 +273,10 @@ class Scene {
     return this;
   }
 
-  save(outDir) {
+  /* 将元数据按UTF8保存，保留中文与可读缩进。 */ save(outDir) {
     OUT = outDir; fs.mkdirSync(OUT, { recursive: true });
     const safe = (cfg.captions && cfg.captions.safeTop) || 960;
-    const label = (el) => `${el.type}${el.text ? `「${el.text}」` : ''}`;
+    const label = /* 绘制简短标签并匹配本期文字层级。 */ (el) => `${el.type}${el.text ? `「${el.text}」` : ''}`;
     if (!this.isCover) for (const el of this.elements) if (el.y + el.height > safe) console.warn(`  ⚠ ${this.name}: ${label(el)} 底边 ${Math.round(el.y + el.height)} 超过字幕安全线 ${safe}`);
     // 品牌水印占位（config.json brand.watermark）：角上 300×130 别放元素
     const wm = cfg.brand && cfg.brand.watermark;
@@ -293,10 +293,10 @@ class Scene {
       appState: { viewBackgroundColor: '#ffffff', gridSize: null }, files: this.files,
     };
     // 只出 Obsidian 插件格式：图片不内嵌 base64，走 Embedded Files 引用同目录 png
-    const embedded = Object.values(this.files).map((f) => `${f.id}: [[${f.name}]]`).join('\n');
+    const embedded = Object.values(this.files).map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (f) => `${f.id}: [[${f.name}]]`).join('\n');
     const mdDoc = { ...doc, files: {} };
     // Obsidian Excalidraw 插件新格式：.excalidraw.md
-    const textEls = this.elements.filter((e) => e.type === 'text').map((e) => `${e.text} ^${e.id}`).join('\n\n');
+    const textEls = this.elements.filter(/* 筛出满足当前检查条件的项，排除不适用数据。 */ (e) => e.type === 'text').map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (e) => `${e.text} ^${e.id}`).join('\n\n');
     const md = `---\n\nexcalidraw-plugin: parsed\ntags: [excalidraw]\n\n---\n==⚠  Switch to EXCALIDRAW VIEW in the MORE OPTIONS menu of this document. ⚠== You can decompress Drawing data with the command palette: 'Decompress current Excalidraw file'. For more info check in plugin settings under 'Saving'\n\n\n# Excalidraw Data\n\n## Text Elements\n${textEls}\n\n${embedded ? `## Embedded Files\n${embedded}\n\n` : ''}%%\n## Drawing\n\`\`\`json\n${JSON.stringify(mdDoc)}\n\`\`\`\n%%`;
     fs.writeFileSync(path.join(OUT, `${this.name}.excalidraw.md`), md);
     return { name: this.name, segments: this.segments, beatOf: this.beatOf };
@@ -308,7 +308,7 @@ const W = 1920, H = 1080, CX = W / 2, CY = H / 2;
 // 把所有场景写到 <期目录>/scenes/，生成 script.json 和 旁白稿.md
 function build(projectDir, sceneList, extra = {}) {
   const P = projectPaths(projectDir);
-  const meta = sceneList.map((s) => s.save(P.scenes));
+  const meta = sceneList.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (s) => s.save(P.scenes));
   fs.writeFileSync(P.script, JSON.stringify(meta, null, 1));
   // 封面：extra.cover = (s, ratio) => { s.coverLayout({...ratio, ...}) }，每个画幅一张，存 scenes/00-cover-<ratio>.excalidraw.md + cover.json
   const covers = [];
@@ -326,7 +326,7 @@ function build(projectDir, sceneList, extra = {}) {
   // 贴纸 png 复制到 scenes/ 旁边，供 .excalidraw.md 的 Embedded Files 引用
   for (const s of sceneList) for (const f of Object.values(s.files)) fs.copyFileSync(path.join(P.assets, f.name), path.join(P.scenes, f.name));
   writeNote(P, meta);
-  console.log(meta.map((s) => `${s.name}: ${s.segments.length} beats, ${s.beatOf.length} elements`).concat(covers.map((c) => `${c.name}: 封面 ${c.width}×${c.height}, ${c.beatOf.length} elements`)).join('\n'));
+  console.log(meta.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (s) => `${s.name}: ${s.segments.length} beats, ${s.beatOf.length} elements`).concat(covers.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (c) => `${c.name}: 封面 ${c.width}×${c.height}, ${c.beatOf.length} elements`)).join('\n'));
   return meta;
 }
 
@@ -340,7 +340,7 @@ function writeNote(P, meta) {
     let dur = '';
     if (fs.existsSync(a)) { const d = JSON.parse(fs.readFileSync(a)).duration; total += d; dur = `（${d.toFixed(0)}s）`; }
     L.push(`## ${s.name}${dur}  [[${s.name}.excalidraw]]`, '');
-    s.segments.forEach((seg, i) => L.push(`${i + 1}. ${seg}`));
+    s.segments.forEach(/* 逐项执行当前操作，不把部分成功当作全量通过。 */ (seg, i) => L.push(`${i + 1}. ${seg}`));
     L.push('');
   }
   if (total) L.splice(4, 0, `全片旁白约 ${Math.floor(total / 60)}:${String(Math.round(total % 60)).padStart(2, '0')}`, '');
@@ -349,7 +349,7 @@ function writeNote(P, meta) {
 
 // 封面画幅
 const COVER_SIZES = { '4:3': [1440, 1080], '3:4': [1080, 1440], '16:9': [1920, 1080], '1:1': [1080, 1080] };
-const coverSize = (ratio) => COVER_SIZES[ratio] || COVER_SIZES['4:3'];
+const coverSize = /* 依据明确的封面比例返回独立封面画布尺寸。 */ (ratio) => COVER_SIZES[ratio] || COVER_SIZES['4:3'];
 
 // 片尾品牌卡：名字（或 logo）+ 品牌色划线 + slogan + CTA，一个 beat，逐笔画出。由 render.js 在成片末尾追加。
 function brandEndCard(brand) {
@@ -380,8 +380,8 @@ function brandEndCard(brand) {
   }
   return s;
 }
-const expandHome = (p) => { const e = p.replace(/^~/, process.env.HOME); return path.isAbsolute(e) ? e : path.join(__dirname, '..', e); };
+const expandHome = /* 展开本机用户路径，不依赖原作者盘符。 */ (p) => { const e = p.replace(/^~/, process.env.HOME); return path.isAbsolute(e) ? e : path.join(__dirname, '..', e); };
 
 module.exports = { Scene, C, W, H, CX, CY, build, writeNote, brandEndCard, projectDir: null };
 // 项目 scenes.js 里 require 后先调用 use(__dirname)，image() 才知道贴纸在哪
-module.exports.use = (dir) => { module.exports.projectDir = dir; return module.exports; };
+module.exports.use = /* 绑定当前工程位置，后续本地贴纸按此位置解析。 */ (dir) => { module.exports.projectDir = dir; return module.exports; };

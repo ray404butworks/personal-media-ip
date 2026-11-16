@@ -31,7 +31,7 @@ npm run still -- brand-check.png --frame=820 --scale=0.5
 npm run render
 ```
 
-也可复用本机 `已安装同版本依赖的 node_modules`，实际版本以工程为准。样例 package.json 固定当次使用的 Remotion 4.0.508 / React 19.2.8，避免安装时静默漂移。SignPainter 需本机已安装；跨平台使用前核对字形。不要将此片声线、案情和全文复制到新片。
+也可复用本机 `已安装同版本依赖的 node_modules`，实际版本以工程为准。样例 package.json 固定当次使用的 Remotion 4.0.544 / React 19.2.8，避免安装时静默漂移。已配置的OFL小赖字体 需本机已安装；跨平台使用前核对字形。不要将此片声线、案情和全文复制到新片。
 
 ## 案例来源
 

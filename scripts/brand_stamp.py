@@ -4,6 +4,7 @@ import argparse
 from PIL import Image,ImageDraw,ImageFont,ImageFilter,ImageColor
 from apply_config import ROOT,load,resolve
 def make_mark(width,c,dark=False):
+ """按配置字体和固定几何合成品牌字标。"""
  b=c['brand'];g=b['graphic'];scale=width/320
  if b.get('logo'):
   im=Image.open(resolve(b['logo'])).convert('RGBA');im.thumbnail((width,int(width*.45)));return im

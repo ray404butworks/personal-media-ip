@@ -20,7 +20,7 @@ const STYLE =
   "Simple chibi proportions, clean and readable at small size, isolated subject centred on a PURE FLAT WHITE background #FFFFFF with nothing else. " +
   "No shadow, no ground line, no texture, no gradient, no text, no letters, no numerals, no logos, no watermark, no border, no photorealism, no 3D, no thin pen lines, no cross-hatching.";
 
-export function stickerPrompt(desc) { return `${desc}. ${STYLE}`; }
+export /* 拼接统一贴纸风格与本期真实主体描述。 */ function stickerPrompt(desc) { return `${desc}. ${STYLE}`; }
 // 真人漫画像：--ref=真人照片 --likeness，desc 只写姿势/表情/服装
 export function caricaturePrompt(desc) {
   return `A friendly editorial caricature sticker of the real person shown in the attached reference photo. ` +
@@ -30,18 +30,18 @@ export function caricaturePrompt(desc) {
     `single isolated figure centred on a PURE FLAT WHITE background #FFFFFF. No shadow, no ground, no text, no letters, no logos, no border, no photorealism, no 3D.`;
 }
 
-function run(bin, args, timeout = TIMEOUT_MS) {
-  return new Promise((resolve, reject) => {
+/* 以参数数组启动子进程，检查退出状态，不拼接命令字符串。 */ function run(bin, args, timeout = TIMEOUT_MS) {
+  return new Promise(/* 等待当前异步步骤完成，并向上层传递失败。 */ (resolve, reject) => {
     const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"] });
     let out = "", err = "";
-    const timer = setTimeout(() => child.kill("SIGKILL"), timeout);
-    child.stdout.on("data", (d) => (out += d));
-    child.stderr.on("data", (d) => (err += d));
-    child.on("error", (e) => { clearTimeout(timer); reject(e); });
-    child.on("close", (code) => { clearTimeout(timer); code === 0 ? resolve({ out, err }) : reject(Object.assign(new Error(`codex exit ${code}`), { out, err })); });
+    const timer = setTimeout(/* 在约定时间处理等待或超时，不执行动态代码字符串。 */ () => child.kill("SIGKILL"), timeout);
+    child.stdout.on("data", /* 响应当前进程或资源事件并更新完成状态。 */ (d) => (out += d));
+    child.stderr.on("data", /* 响应当前进程或资源事件并更新完成状态。 */ (d) => (err += d));
+    child.on("error", /* 响应当前进程或资源事件并更新完成状态。 */ (e) => { clearTimeout(timer); reject(e); });
+    child.on("close", /* 响应当前进程或资源事件并更新完成状态。 */ (code) => { clearTimeout(timer); code === 0 ? resolve({ out, err }) : reject(Object.assign(new Error(`codex exit ${code}`), { out, err })); });
   });
 }
-function newestSince(startMs) {
+/* 在生成目录寻找本次任务之后的最新PNG，避免误用旧图。 */ function newestSince(startMs) {
   let best = null;
   for (const d of (fs.existsSync(GEN_DIR) ? fs.readdirSync(GEN_DIR) : [])) {
     const sub = path.join(GEN_DIR, d);
@@ -73,7 +73,7 @@ export async function codexGenerate(prompt, outPng, { grid = false, refImages = 
     `After saving, confirm the saved path.`;
   const startMs = Date.now() - 1000;
   const args = ["exec", "--skip-git-repo-check", "--ignore-user-config", "-s", "workspace-write", "-c", "approval_policy=never",
-    "-c", `model=${CODEX_MODEL}`, "-c", "model_reasoning_effort=low", "-C", cwd, ...refImages.flatMap((p) => ["-i", path.resolve(p)]), "--", instruction];
+    "-c", `model=${CODEX_MODEL}`, "-c", "model_reasoning_effort=low", "-C", cwd, ...refImages.flatMap(/* 展开本步骤关联资源，供逐项检查与处理。 */ (p) => ["-i", path.resolve(p)]), "--", instruction];
   let runErr = null;
   try { await run(CODEX_BIN, args); } catch (e) { runErr = e; }
   if (fs.existsSync(abs) && fs.statSync(abs).size > 0) return abs;
@@ -87,7 +87,7 @@ export async function keyoutAndSplit(rawPng, outputs, { grid = false, pad = 24 }
   const browser = await chromium.launch();
   const page = await browser.newPage();
   const dataUrl = "data:image/png;base64," + fs.readFileSync(rawPng).toString("base64");
-  const results = await page.evaluate(async ({ dataUrl, n, grid, pad }) => {
+  const results = await page.evaluate(/* 在渲染页面执行本帧所需操作，不传入凭据。 */ async ({ dataUrl, n, grid, pad }) => {
     const img = new Image(); img.src = dataUrl; await img.decode();
     const W = img.naturalWidth, H = img.naturalHeight;
     const cells = grid ? [[0, 0], [W / 2, 0], [0, H / 2], [W / 2, H / 2]].slice(0, n) : [[0, 0]];
@@ -97,17 +97,17 @@ export async function keyoutAndSplit(rawPng, outputs, { grid = false, pad = 24 }
       const c = document.createElement("canvas"); c.width = cw; c.height = ch;
       const ctx = c.getContext("2d"); ctx.drawImage(img, sx, sy, cw, ch, 0, 0, cw, ch);
       const id = ctx.getImageData(0, 0, cw, ch), d = id.data;
-      const isWhite = (i) => { if (d[i + 3] < 20) return true; const r = d[i], g = d[i + 1], b = d[i + 2]; return Math.min(r, g, b) > 232 && Math.max(r, g, b) - Math.min(r, g, b) < 14; };
+      const isWhite = /* 按像素阈值判断白底区域，供透明化处理。 */ (i) => { if (d[i + 3] < 20) return true; const r = d[i], g = d[i + 1], b = d[i + 2]; return Math.min(r, g, b) > 232 && Math.max(r, g, b) - Math.min(r, g, b) < 14; };
       // 泛洪：从四边出发，只去掉与边界连通的白
       const seen = new Uint8Array(cw * ch); const stack = [];
-      const push = (x, y) => { const k = y * cw + x; if (x < 0 || y < 0 || x >= cw || y >= ch || seen[k]) return; seen[k] = 1; if (isWhite(k * 4)) stack.push(k); else seen[k] = 2; };
+      const push = /* 将已构造元素加入当前场景并保留绘制顺序。 */ (x, y) => { const k = y * cw + x; if (x < 0 || y < 0 || x >= cw || y >= ch || seen[k]) return; seen[k] = 1; if (isWhite(k * 4)) stack.push(k); else seen[k] = 2; };
       for (let x = 0; x < cw; x++) { push(x, 0); push(x, ch - 1); }
       for (let y = 0; y < ch; y++) { push(0, y); push(cw - 1, y); }
       while (stack.length) { const k = stack.pop(); const x = k % cw, y = (k / cw) | 0; d[k * 4 + 3] = 0; push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1); }
       // 边缘羽化：紧贴透明区的像素按白度降 alpha
       for (let y = 1; y < ch - 1; y++) for (let x = 1; x < cw - 1; x++) {
         const k = y * cw + x; if (d[k * 4 + 3] === 0) continue;
-        const nb = [k - 1, k + 1, k - cw, k + cw].some((j) => d[j * 4 + 3] === 0);
+        const nb = [k - 1, k + 1, k - cw, k + cw].some(/* 检查是否至少有一项满足当前校验条件。 */ (j) => d[j * 4 + 3] === 0);
         if (nb) { const m = Math.min(d[k * 4], d[k * 4 + 1], d[k * 4 + 2]); d[k * 4 + 3] = Math.round(255 * Math.min(1, (255 - m) / 60)); }
       }
       // 连通块：去掉杂点与邻格残片（只留最大块 + 面积 ≥ 3% 的块）
@@ -134,7 +134,7 @@ export async function keyoutAndSplit(rawPng, outputs, { grid = false, pad = 24 }
     return out;
   }, { dataUrl, n: outputs.length, grid, pad });
   await browser.close();
-  results.forEach((r, i) => {
+  results.forEach(/* 逐项执行当前操作，不把部分成功当作全量通过。 */ (r, i) => {
     if (!r) { console.log("  空白格:", outputs[i]); return; }
     fs.writeFileSync(outputs[i], Buffer.from(r.dataUrl.split(",")[1], "base64"));
     console.log(`  ${path.basename(outputs[i])}  ${r.w}x${r.h}`);
@@ -149,8 +149,8 @@ if (process.argv[1] && import.meta.url.endsWith(path.basename(process.argv[1])))
   const single = args.includes("--single");
   const rekey = args.includes("--rekey");
   const likeness = args.includes("--likeness");
-  const ref = args.filter((a) => a.startsWith("--ref=")).map((a) => a.slice(6));
-  const items = args.slice(1).filter((a) => !a.startsWith("--")).map((a) => { const i = a.indexOf("="); return { name: a.slice(0, i), desc: a.slice(i + 1) }; });
+  const ref = args.filter(/* 筛出满足当前检查条件的项，排除不适用数据。 */ (a) => a.startsWith("--ref=")).map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (a) => a.slice(6));
+  const items = args.slice(1).filter(/* 筛出满足当前检查条件的项，排除不适用数据。 */ (a) => !a.startsWith("--")).map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (a) => { const i = a.indexOf("="); return { name: a.slice(0, i), desc: a.slice(i + 1) }; });
   if (!items.length || items.length > 4) { console.error("每次 1~4 个 name=描述"); process.exit(1); }
   const assets = P.assets, raw = P.raw;
   fs.mkdirSync(raw, { recursive: true }); fs.mkdirSync(assets, { recursive: true });
@@ -158,11 +158,11 @@ if (process.argv[1] && import.meta.url.endsWith(path.basename(process.argv[1])))
   const grid = items.length > 1 && !single;
   const quad = ["top-left", "top-right", "bottom-left", "bottom-right"];
   const prompt = grid
-    ? items.map((it, k) => `${quad[k]} quadrant: ${it.desc}`).join("\n") + `\n${STYLE}`
+    ? items.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (it, k) => `${quad[k]} quadrant: ${it.desc}`).join("\n") + `\n${STYLE}`
     : likeness ? caricaturePrompt(items[0].desc) : stickerPrompt(items[0].desc);
-  const rawPng = path.join(raw, (grid ? items.map((i) => i.name).join("+") : items[0].name) + ".png");
+  const rawPng = path.join(raw, (grid ? items.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (i) => i.name).join("+") : items[0].name) + ".png");
   if (rekey) console.log(`复用原图 ${path.relative(project, rawPng)}`);
   else { console.log(`codex 出图 → ${path.relative(project, rawPng)}`); await codexGenerate(prompt, rawPng, { grid, refImages: ref, refRole: likeness ? 'likeness' : 'style', cwd: project }); }
   console.log("抠白底 + 裁边:");
-  await keyoutAndSplit(rawPng, items.map((i) => path.join(assets, i.name + ".png")), { grid });
+  await keyoutAndSplit(rawPng, items.map(/* 映射集合项为当前步骤需要的数据，保留原有顺序。 */ (i) => path.join(assets, i.name + ".png")), { grid });
 }

@@ -1,8 +1,22 @@
 # 个人自媒体IP打造
 
+[下载完整配置包 v0.2.0](https://github.com/ray404butworks/personal-media-ip/releases/download/v0.2.0/personal-media-ip-v0.2.0.zip) · [发布检查记录](docs/发布检查-2026-11-17.md)
+
 把选题、事实核查、文案编写、三轮审校、配音、视频、封面和发布稿组织成一套可修改的 Agent 工作流。默认演示品牌是 **RayTalk**，你可以换成自己的账号。
 
 适合 Codex、Claude Code 等能读文件、运行本地工具的 Agent。本仓库包含提示词、技能和制作脚本；需要 Agent 判断与执行，不是输入选题后无需配置就能运行的独立软件。
+
+## 最新方式：一句话启动整套交付
+
+完成本机配置后，说 **“帮我做关于〔实际选题〕的视频”** 即可。AI按选题选择调查片或白板讲解，自主审查受众、从指定官方音色池随机选择并锁定整期声音，继续完成成片、字幕、双封面、四平台文案、公众号全文和来源/检查记录。已有确认的工程接着做，不重复初始化或换声。
+
+| AI判断的受众倾向 | 声音 | 原生语速 |
+|---|---|---|
+| 偏男性 | 小天2.0、悠悠君子2.0等概率随机一个 | 各1.1倍 |
+| 偏女性 | 心灵鸡汤2.0 | 1.2倍 |
+| 无明显倾向 | 三者等概率随机一个 | 按各自配置 |
+
+每期只抽一次。音频与时间戳必须同次生成；改稿、音色或语速后缓存失效。受众判断记录为编辑判断或真实统计依据，不编造比例。详见[最新工作流](docs/最新工作流.md)、[声音接入](docs/声音接入.md)及[完整交付规范](docs/交付包规范.md)。制作备稿不包含自动公开发布。
 
 ## 首次导入：通过对话逐项配置
 
@@ -25,7 +39,7 @@ Codex先问品牌名，再依次带你选视频文风、公众号笔风、平台
 
 查证 → 按写作配置编写初稿
      → Humanizer-zh → stop-slop → taste-skill适用规则
-     → 事实与表达复核 → 配音/字幕/画面/闪避混音 → 验收
+     → 事实与表达复核 → AI审查受众/整期锁声 → 原生配音/字幕/画面/闪避混音 → 验收
      → 成片 + SRT + 4:3/3:4双封面
        + 抖音/哔哩哔哩/小红书/微信视频号标题与发布文案
        + 微信公众号一个标题和完整Markdown文章
@@ -47,7 +61,7 @@ python scripts/apply_config.py
 cd skills/whiteboard-video
 npm ci
 cd ../..
-python -m pip install pillow
+python -m pip install -r requirements.txt
 ```
 
 Playwright的安装会下载Chromium；也可设置`WB_CHROMIUM_EXECUTABLE`指向现有兼容浏览器。缓存位置可以通过`PLAYWRIGHT_BROWSERS_PATH`和`npm_config_cache`按自己的磁盘规划设置。
@@ -74,9 +88,9 @@ Playwright的安装会下载Chromium；也可设置`WB_CHROMIUM_EXECUTABLE`指�
 | 水印星芒/下划线 | 开/开 | `brand.graphic` | 由同步脚本写入派生`watermark.sparkle/underline`，不要同时改两处 |
 | 白板片尾 | 开/5.5秒 | `brand.endCard.enabled/seconds/holdSeconds` | 最后1.5秒停留，按需要关闭或改时长 |
 | 动画笔颜色 | `#F5B942` | `brand.pen.color` | 仅控制白板动画铅笔 |
-| 旁白来源 | external | `tts.engine` | `volc`、`chatcut`或`external`；详见下面声音选项 |
-| 音色 | 套用者自己的音色 | `tts.voiceName/customVoiceId`或`tts.voice/resourceId` | 不包含原作者私有音色ID；名称不等于API ID |
-| 语速 | 1.2倍 | `tts.speed` | 火山原生语速；外部音轨保音高变速并同步时间戳，源音频应为1倍速 |
+| 旁白来源 | volc官方2.0 | `tts.engine` | `volc`、`chatcut`或`external`；详见下面声音选项 |
+| 音色 | AI按受众从三个官方音色选声 | `workflow/旁白音色配置.json`与`tts.voicePolicy.enabled` | 默认按受众选声；关闭策略才使用固定`tts.voice`，不包含私有音色ID |
+| 语速 | 小天/悠悠君子1.1，心灵鸡汤1.2 | `workflow/旁白音色配置.json → voices[].speed` | 优先于全局倍率；只在服务端设定，不重复后期变速 |
 | 配乐文件/开关 | `assets/bgm.mp3` / 开 | `bgm.file/enabled` | 不附原作者音乐，导入自己的；缺文件或关闭则出无配乐 |
 | 配乐音量 | 总`.5`、说话`.1`、间隙`.22` | `bgm.gain/speak/gap` | 基于真实旁白做闪避，不能仅固定音量叠加 |
 | 配乐截取/过渡/淡出 | 整首、`.35s`、`3.5s` | `bgm.trim/rampSeconds/tailFadeSeconds` | `trim=[开始秒,结束秒]`；开头1.5秒淡入当前在`lib/mix-bgm.mjs` |
@@ -101,16 +115,16 @@ Playwright的安装会下载Chromium；也可设置`WB_CHROMIUM_EXECUTABLE`指�
 
 **画幅注意：** 白板内核目前采用1920×1080固定坐标，不提供一个JSON开关就变竖屏。竖屏需修改`lib/render.html`、`lib/render.js`、`lib/scene-dsl.js`及场景坐标、安全区。调查片在新Remotion工程的`Composition`里改`width/height`并重新排版；时长由当期旁白和内容决定，不强制十分钟。
 
-## 旁白可以选火山、ChatCut或其他克隆音色
+## 旁白默认按受众选择官方音色
 
-### 火山引擎官方/复刻音色
+### 火山引擎：当前默认
 
-1. 将根目录`.env.example`复制为`.env`，填自己的凭证。切换`config.json → tts.engine="volc"`。
-2. 在`tts.voice`填音色ID，或留空从`.env`的`VOLC_TTS_VOICE`读取。
-3. 官方2.0音色使用`VOLC_TTS_RESOURCE_ID=seed-tts-2.0`；`S_`开头的声音复刻音色使用`volc.megatts.default`，以实际账户资源权限为准。`tts.resourceId`非空时覆盖环境变量。
-4. 白板用`python scripts/wb.py tts <期目录>`；调查/独立旁白可用`node scripts/synthesize_text.mjs narration.txt output.wav`，会另存真实逐字时间戳JSON。
+1. 复制根`.env.example`为本机`.env`，在本机填凭证，不发到聊天、不提交Git。默认资源`seed-tts-2.0`，需开通对应官方音色权限。
+2. Agent写当期`受众审查.json`，运行`node scripts/narration.mjs select <工程>`锁声。缺审查停止，不静默选默认声。
+3. 白板调用`python scripts/wb.py tts <工程>`；调查或独立配音调用`node scripts/narration.mjs synthesize <工程> narration.txt output.wav`。输出音频、同次词时间戳及局部SRT；分段制作时须累计真实时长，不能直接粘贴局部SRT。
+4. 关闭`tts.voicePolicy.enabled`才使用固定音色模式；`tts.voice`或`.env`的`VOLC_TTS_VOICE`指定实际ID。其他自选服务继续保留下面的兼容导入方式，生产Agent不自行切换。
 
-不要把`.env`提交到GitHub。本仓库没有内置可用凭证，不能声称已验证套用者账户的在线合成。
+参考账户已完成三个指定官方音色短段和约3分23秒调查成片；本包不内置可用凭证，也不能替新账户确认额度、权限或听感。
 
 ### ChatCut Desktop 自己的数字人/克隆音色
 
@@ -146,7 +160,7 @@ python scripts/check_publish.py "workspace/当期/四平台发布文案.md"
 python scripts/brand_stamp.py cover.png cover-branded.png
 ```
 
-调查模式需要按选题在`workspace/investigation`建立工程：复制`skills/investigation-video/template/remotion`作起点，安装其固定依赖（Remotion 4.0.508/React 19.2.8），替换演示时间轴与素材。演示只展示品牌/图解，不代表某项真实调查，不能循环样片拼成长片。调用`apply_config.py`生成的品牌配置和字体应随新工程一起复制。
+调查模式需要按选题在`workspace/investigation`建立工程：复制`skills/investigation-video/template/remotion`作起点，安装其固定依赖（Remotion 4.0.544/React 19.2.8），替换演示时间轴与素材。演示只展示品牌/图解，不代表某项真实调查，不能循环样片拼成长片。调用`apply_config.py`生成的品牌配置和字体应随新工程一起复制。
 
 `scripts/check_publish.py`只做结构、平台和标题长度检查，不能证明文案自然或事实真实。三轮审校由Agent阅读技能实际执行；记录真实改动，不以评分或字数减少代替检查。
 
@@ -166,3 +180,9 @@ python scripts/brand_stamp.py cover.png cover-branded.png
 本版本原创配置、工作流、新增脚本和项目文档仅供学习交流，未经Ray许可禁止转载或商用，具体见根LICENSE。配乐、Logo、音色、新闻素材与第三方字体各自遵循其许可。默认不公开分发原作者BGM和私人文章。
 
 发布前进行配置同步、字体/品牌渲染、外部音轨导入、闪避混音和四平台限制的离线检查。没有在线验证别人的火山凭证、ChatCut音色权限或任意第三方服务，也不保证自动出片或通过平台审核。生产成片必须逐期核验实际音画、来源、双封面及交付文件。
+
+## 发布前维护
+
+运行 `python scripts/release_audit.py` 生成字体/许可证清单和安全静态检查；`npm ci --ignore-scripts` 后运行 `npm run check:comments`，检查含匿名回调的中文函数注释。Python函数用AST逐个检查说明。三套Node锁文件运行`npm audit`，Python依赖运行`pip-audit`；不可用的扫描器必须报未完成，不能当作零漏洞。
+
+[2026-11-17发布检查](docs/发布检查-2026-11-17.md)记录字体清理、废弃入口、注释、许可证、漏洞修复与复测范围。小赖字体随附OFL允许商用设计；Remotion有自己的授权条件，不能按MIT处理，见[第三方许可](THIRD_PARTY.md)。原作者音乐、凭证、用户内容和缓存不进入公开包。AI逐项代码复核与独立人类复核分开记录，不用自动通过代替人工签字。

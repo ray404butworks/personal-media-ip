@@ -1,0 +1,14 @@
+{
+  "video": "work/production/final.mp4",
+  "subtitles": "work/production/subtitles.srt",
+  "speechText": "knowledge/口播稿.txt",
+  "cover43": "knowledge/发布包/封面-4x3.png",
+  "cover34": "knowledge/发布包/封面-3x4.png",
+  "publishCopy": "knowledge/发布包/四平台发布文案.md",
+  "wechatMd": "knowledge/发布包/微信公众号文章.md",
+  "wechatTxt": "knowledge/发布包/微信公众号文章.txt",
+  "platformTxt": ["knowledge/发布包/01-抖音.txt", "knowledge/发布包/02-哔哩哔哩.txt", "knowledge/发布包/03-小红书.txt", "knowledge/发布包/04-微信视频号.txt"],
+  "qa": "work/production/qa.json",
+  "playbackQa": "work/production/playback-qa.json",
+  "records": ["knowledge/来源台账.md", "knowledge/素材使用区间.json", "knowledge/审校记录.md", "knowledge/制作与检查.md"]
+}

@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-11-17",
+  "provider": "volc",
+  "voiceType": "official",
+  "resourceId": "seed-tts-2.0",
+  "speed": 1.2,
+  "connectionStatus": "reference-account-verified-not-new-account-guarantee",
+  "credentialsFile": ".env",
+  "modelServiceStatus": "verified-by-live-synthesis-2026-11-16",
+  "officialVoiceList": "https://docs.volcengine.com/docs/doubao-voice/tone-list-3?lang=zh",
+  "voices": [
+    {
+      "key": "xiaotian",
+      "name": "小天 2.0",
+      "gender": "male",
+      "speakerId": "zh_male_taocheng_uranus_bigtts",
+      "speed": 1.1
+    },
+    {
+      "key": "youyoujunzi",
+      "name": "悠悠君子 2.0",
+      "gender": "male",
+      "speakerId": "zh_male_youyoujunzi_uranus_bigtts",
+      "speed": 1.1
+    },
+    {
+      "key": "xinlingjitang",
+      "name": "心灵鸡汤 2.0",
+      "gender": "female",
+      "speakerId": "zh_female_xinlingjitang_uranus_bigtts"
+    }
+  ],
+  "selection": {
+    "reviewer": "production-agent",
+    "reviewBefore": "first-narration-synthesis",
+    "reviewBasis": [
+      "topic",
+      "intended-viewers",
+      "use-scenarios",
+      "available-audience-analytics"
+    ],
+    "reviewRule": "AI审查具体选题、目标观众、使用场景及已有受众数据，说明判断依据；没有数据时标注为编辑判断，不编造男女比例，也不单凭刻板印象判断。",
+    "pools": {
+      "male": [
+        "xiaotian",
+        "youyoujunzi"
+      ],
+      "female": [
+        "xinlingjitang"
+      ],
+      "mixed": [
+        "xiaotian",
+        "youyoujunzi",
+        "xinlingjitang"
+      ]
+    },
+    "mixedRule": "受众没有明显性别偏向或证据不足时，从三者中随机选择；这是未指定情形的默认处理，Ray后续指令优先。",
+    "randomMethod": "uniform-per-eligible-voice",
+    "scope": "one-voice-per-episode",
+    "lockFile": "旁白选择.json",
+    "lockFields": [
+      "topic",
+      "audience",
+      "reason",
+      "basisType",
+      "voiceName",
+      "speakerId",
+      "resourceId",
+      "speed",
+      "selectedAt"
+    ],
+    "reuseOnRetryOrResume": true,
+    "reselectPerScene": false,
+    "override": "Ray为当期明确指定音色时，以当次要求为准。"
+  },
+  "timing": {
+    "source": "same-synthesis-response-as-audio",
+    "enableSubtitle": true,
+    "requireActualAudioDuration": true,
+    "requireNonemptyValidWordTimestamps": true,
+    "doNotApplyExternalSpeedAgain": true
+  },
+  "fallback": "stop-on-error-no-automatic-provider-or-voice-change",
+  "note": "参考账户已完成真实短段合成和熏硫白芷整片验收；每个新账户须单独验证权限，每期检查真实音频与字幕，不声称自动人工听审。",
+  "runtimeModule": "scripts/narration.mjs",
+  "setupGuide": "docs/声音接入.md"
+}

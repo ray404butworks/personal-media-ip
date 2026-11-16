@@ -3,8 +3,11 @@ from pathlib import Path
 import argparse,subprocess,json,re
 from apply_config import ROOT,load,apply,resolve,save
 
-def norm(text):return ''.join(re.findall(r'[\u4e00-\u9fffA-Za-z0-9]',text)).lower()
+def norm(text):
+    """归一化文本用于对齐校验，不用于推测语音时间。"""
+    return ''.join(re.findall(r'[\u4e00-\u9fffA-Za-z0-9]',text)).lower()
 def align(segments,words,duration):
+ """核对真实音频词边界与完整稿件，并计算场景段起点。"""
  if not words:raise ValueError('No real word timestamps; synthesize/transcribe the audio first')
  chars=[];last=0.0
  for w in words:
@@ -24,6 +27,7 @@ def align(segments,words,duration):
  starts[0]=0
  return starts,wordlist
 def main():
+ """解析命令行参数并执行本入口，失败保持非零退出。"""
  ap=argparse.ArgumentParser();ap.add_argument('--project',required=True);ap.add_argument('--manifest',required=True);a=ap.parse_args()
  c=apply();p=Path(a.project).resolve();manifest=Path(a.manifest).resolve();items=load(manifest)['scenes'];scenes=load(p/'scenes/script.json')
  target=resolve(c['dirs']['build'])/p.name/'work/audio';target.mkdir(parents=True,exist_ok=True)

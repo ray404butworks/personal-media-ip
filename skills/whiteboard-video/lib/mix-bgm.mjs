@@ -61,7 +61,7 @@ for (let i = 0; i < n; i++) {
 }
 const envPath = path.join(P.audio, "_bgm-env.f32");
 fs.writeFileSync(envPath, Buffer.from(out.buffer));
-const spk = dil.reduce((a, b) => a + b, 0) / frames;
+const spk = dil.reduce(/* 按当前累计规则汇总集合，避免改变项目顺序。 */ (a, b) => a + b, 0) / frames;
 console.log(`旁白 ${dur.toFixed(1)}s，说话占比 ${(spk * 100).toFixed(0)}%，BGM ${path.basename(BGM)} 电平：说话 ${(SPEAK * GAIN).toFixed(3)} / 间隙 ${(GAP * GAIN).toFixed(3)}`);
 
 // 4. BGM 裁剪循环 × 包络，再与旁白叠加

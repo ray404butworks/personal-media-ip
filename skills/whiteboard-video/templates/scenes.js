@@ -62,7 +62,7 @@ const scenes = [];
 
 // ---------- 封面（wb cover 出 封面-4x3.png / 封面-3x4.png；wb build 也会出） ----------
 // title 两行以内、每行 ≤8 字，默认最后一行是钩子（品牌绿 + 马克笔高亮）；sticker 用本期主角贴纸；sub 可省
-const cover = (s, ratio) => s.coverLayout({
+const cover = /* 按当前比例布局封面，与视频画幅独立。 */ (s, ratio) => s.coverLayout({
   ratio,
   title: '第一行说对象\n第二行说钩子',
   sub: '一句补充（可省）',

@@ -5,14 +5,19 @@
     "investigation": "workspace/investigation"
   },
   "tts": {
-    "engine": "external",
+    "engine": "volc",
     "voice": "",
-    "voiceName": "我的克隆音色",
+    "voiceName": "AI按受众选择官方2.0音色",
     "customVoiceId": "",
-    "resourceId": "",
+    "resourceId": "seed-tts-2.0",
     "speed": 1.2,
     "externalManifest": "",
-    "note": "外部音色由自己的服务生成，导入真实音频及时间戳；volc可切换为原生火山。"
+    "note": "AI先记录受众审查，再按声池随机锁定整期；每个音色的原生语速以旁白配置为准，不再后期变速。",
+    "voicePolicy": {
+      "enabled": true,
+      "file": "workflow/旁白音色配置.json",
+      "module": "scripts/narration.mjs"
+    }
   },
   "bgm": {
     "file": "assets/bgm.mp3",

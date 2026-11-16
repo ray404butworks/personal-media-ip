@@ -2,7 +2,7 @@ import React from 'react';
 
 // 签名字标：四角星芒 + 手写体签名 + 甩笔底划。signature / accent / wordmark 由 brand 配置传入，这里的默认值只是占位。
 // Pass the generated brand profile; WorkflowBrand is registered by the composition.
-export function BrandStamp({brand={},dark=false,right=75,top=33,scale=1}) {
+export /* 依据当前品牌配置合成字标，字体、星芒和底划遵循同一几何。 */ function BrandStamp({brand={},dark=false,right=75,top=33,scale=1}) {
   const accent=brand.accent || '#A5B0E3';
   const signature=brand.signature || 'RayTalk';
   return <div aria-label={brand.wordmark || 'RayTalk'} style={{position:'absolute',right,top,width:265,height:84,color:dark?'#fafaf8':'#20262d',transform:`scale(${scale})`,transformOrigin:'top right',pointerEvents:'none'}}>
